@@ -1,0 +1,23 @@
+program : program ext_declaration
+      |
+      ;
+
+ext_declaration: function_decl
+      | declaration
+      
+declaration: type_specifier IDENTIFER array_specifier
+      | type_specifier IDENTIFER
+
+type_specifier:
+      type_name
+
+type_name: K_INT | K_CHAR | K_FLOAT
+
+array_specifier: array_specifier array_size
+      | array_size
+
+array_size: 
+    '[' INTEGER ']'
+    | 
+    ;
+
