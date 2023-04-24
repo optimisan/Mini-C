@@ -96,6 +96,7 @@ functionDecl: varType IDENTIFIER '(' param_list ')'
                                 compileError($2.src, strlen($2.name), "Function %s already declared", $2.name);
                             }
                             Type* funcType = malloc(sizeof(Type));
+                            funcSymbol->type = funcType;
                             funcType->sym = funcSymbol;
                             funcType->op = T_FUNCTION;
                             funcType->type = malloc(sizeof(Type));
@@ -393,7 +394,7 @@ expr: INTEGER {$$ = intNode($1);}
             printf("Idenfitier base type is %d\n", $$->exprType.ndim);
         }
     | FLOAT {$$ = floatNode($1);}
-    | STRING {$$ = strNode($1, strlen($1));}
+    | STRING {$$ = strNode($1, strlen($1)); printf("String here, %d\n", $$->src.length);}
     | callExpr {$$ = $1;}
     | '-' expr %prec UMINUS { $$ = oprNode('-', 1, $2); typeCheckUnary($2); $$->exprType.op = $2->exprType.op;}
     | '!' expr %prec UMINUS { $$ = oprNode('!', 1, $2); typeCheckUnary($2); $$->exprType.op = $2->exprType.op;}
@@ -435,16 +436,44 @@ callExpr: IDENTIFIER '(' arg_list ')' {
                 if(!callee){
                     // compileError("Error: Function '%s' not defined", $1);
                     compileError($1.src, strlen($1.name), "Function '%s' not defined", $1.name);
-                    exit(1);
+                }
+                if(callee->type->op != T_FUNCTION){
+                    compileError($1.src, strlen($1.name), "Identifier '%s' is not a function", $1.name);
                 }
                 $$ = oprNode(OPR_CALL, 1, identifierNode(callee), $3);
-                // $$.exprType.op = callee->type->op;
+                $$->exprType.op = callee->type->type->op;
+                //Type check all parameters
+                Node *param = $3;
+                int i=callee->type->size-1;
+                printf("Starting with %d params\n", i);
+                if(param){
+                    printf("here\n");
+                    while(param->as.opr.nops==2 && i >= 0){
+                        printf("Comparing with original type %d\n", param->as.opr.operands[1]->exprType.op);
+                        if(!typeCheckAssign(callee->type->proto[i]->op, param->as.opr.operands[1]->exprType.op)){
+                            compileError(param->as.opr.operands[1]->src, param->as.opr.operands[1]->src.length, "Type mismatch in function call to '%s'", $1.name);
+                        }
+                        param = param->as.opr.operands[0];
+                        i--;
+                    }
+                    printf("Comparing with original type %d %d\n", param->exprType.op, i);
+                    if(i<0) {
+                            compileError($1.src, strlen($1.name), "Too many parameters in function call to '%s'", $1.name);
+                    }
+                    if(!typeCheckAssign(callee->type->proto[i]->op, param->exprType.op)){
+                        compileError($1.src, strlen($1.name), "Type mismatch in function call to '%s'", $1.name);
+                    }
+                    i--;
+                }
+                if(i >= 0){
+                    compileError($1.src, strlen($1.name), "Too few parameters in function call to '%s'; expected %d", $1.name, callee->type->size);
+                }
                 printNode($$);
     }
 
 arg_list: expr {$$ = $1;}
     | arg_list ',' expr {$$ = oprNode(OPR_LIST, 2, $1, $3);}
-    |
+    | {$$ = NULL;}
     ;
 
 returnStmt: RETURN 

@@ -736,16 +736,16 @@ static const yytype_int8 yytranslate[] =
 static const yytype_int16 yyrline[] =
 {
        0,    80,    80,    83,    84,    87,    88,    89,    93,    92,
-     135,   145,   153,   156,   160,   163,   165,   167,   168,   169,
-     170,   178,   255,   255,   255,   257,   258,   260,   263,   266,
-     269,   269,   273,   274,   275,   283,   284,   286,   288,   289,
-     290,   291,   292,   293,   294,   295,   298,   298,   303,   304,
-     305,   308,   309,   312,   313,   316,   324,   331,   338,   345,
-     351,   359,   361,   363,   364,   367,   368,   369,   370,   373,
-     375,   375,   377,   379,   379,   385,   386,   388,   389,   390,
-     395,   396,   397,   398,   399,   400,   401,   402,   403,   404,
-     405,   406,   407,   408,   409,   410,   411,   412,   413,   418,
-     433,   445,   446,   447,   450,   451,   454,   456
+     136,   146,   154,   157,   161,   164,   166,   168,   169,   170,
+     171,   179,   256,   256,   256,   258,   259,   261,   264,   267,
+     270,   270,   274,   275,   276,   284,   285,   287,   289,   290,
+     291,   292,   293,   294,   295,   296,   299,   299,   304,   305,
+     306,   309,   310,   313,   314,   317,   325,   332,   339,   346,
+     352,   360,   362,   364,   365,   368,   369,   370,   371,   374,
+     376,   376,   378,   380,   380,   386,   387,   389,   390,   391,
+     396,   397,   398,   399,   400,   401,   402,   403,   404,   405,
+     406,   407,   408,   409,   410,   411,   412,   413,   414,   419,
+     434,   474,   475,   476,   479,   480,   483,   485
 };
 #endif
 
@@ -1501,6 +1501,7 @@ yyreduce:
                                 compileError((yyvsp[-3].id).src, strlen((yyvsp[-3].id).name), "Function %s already declared", (yyvsp[-3].id).name);
                             }
                             Type* funcType = malloc(sizeof(Type));
+                            funcSymbol->type = funcType;
                             funcType->sym = funcSymbol;
                             funcType->op = T_FUNCTION;
                             funcType->type = malloc(sizeof(Type));
@@ -1532,19 +1533,19 @@ yyreduce:
                             }
                             beginScope();
                         }
-#line 1536 "y.tab.c"
+#line 1537 "y.tab.c"
     break;
 
   case 9: /* functionDecl: varType IDENTIFIER '(' param_list ')' $@1 funcBody  */
-#line 131 "parser.y"
+#line 132 "parser.y"
                 {
                     endScope();
                 }
-#line 1544 "y.tab.c"
+#line 1545 "y.tab.c"
     break;
 
   case 10: /* param_list: varType IDENTIFIER  */
-#line 135 "parser.y"
+#line 136 "parser.y"
                                {
                         Symbol* psym = install((yyvsp[0].id).name, &identifiers, level, (yyvsp[0].id).src);
                         (yyval.node) = oprNode(OPR_LIST, 2, (yyvsp[-1].iValue), identifierNode(psym)); 
@@ -1555,11 +1556,11 @@ yyreduce:
                         paramType->sym = psym;
                         psym->type = paramType;
                     }
-#line 1559 "y.tab.c"
+#line 1560 "y.tab.c"
     break;
 
   case 11: /* param_list: param_list ',' varType IDENTIFIER  */
-#line 145 "parser.y"
+#line 146 "parser.y"
                                         {
                         printf("Found param %s\n", (yyvsp[0].id).name);
                         Symbol* psym = install((yyvsp[0].id).name, &identifiers, level, (yyvsp[0].id).src);
@@ -1568,70 +1569,70 @@ yyreduce:
                         }
                         (yyval.node) = oprNode(OPR_LIST, 3, (yyvsp[-3].node), identifierNode(psym), (yyvsp[-1].iValue));
                     }
-#line 1572 "y.tab.c"
+#line 1573 "y.tab.c"
     break;
 
   case 12: /* param_list: %empty  */
-#line 153 "parser.y"
+#line 154 "parser.y"
       {(yyval.node)=NULL;}
-#line 1578 "y.tab.c"
+#line 1579 "y.tab.c"
     break;
 
   case 13: /* varInitialiser: IDENTIFIER arraySpecifier  */
-#line 156 "parser.y"
+#line 157 "parser.y"
                                           {
                                     (yyval.node) = oprNode('=', 2, identifierNode(install((yyvsp[-1].id).name, &identifiers, level, (yyvsp[-1].id).src)), (yyvsp[0].node));
                                     printf("var init");
                                     }
-#line 1587 "y.tab.c"
+#line 1588 "y.tab.c"
     break;
 
   case 14: /* varInitialiser: IDENTIFIER arraySpecifier '=' expr  */
-#line 160 "parser.y"
+#line 161 "parser.y"
                                          {
                                     (yyval.node) = oprNode('=', 3, identifierNode(install((yyvsp[-3].id).name, &identifiers, level, (yyvsp[-3].id).src)), (yyvsp[-2].node), (yyvsp[0].node));
                                     }
-#line 1595 "y.tab.c"
+#line 1596 "y.tab.c"
     break;
 
   case 15: /* varInitialiser: IDENTIFIER arraySpecifier '=' arrayInitialiser  */
-#line 163 "parser.y"
+#line 164 "parser.y"
                                                      {(yyval.node) = oprNode('=', 3, identifierNode(install((yyvsp[-3].id).name, &identifiers, level, (yyvsp[-3].id).src)), (yyvsp[-2].node), (yyvsp[0].node));}
-#line 1601 "y.tab.c"
+#line 1602 "y.tab.c"
     break;
 
   case 16: /* arrayInitialiser: '{' array_init_list '}'  */
-#line 165 "parser.y"
+#line 166 "parser.y"
                                           { (yyval.node) = (yyvsp[-1].node); (yyval.node)->exprType.op = T_ARRAY;}
-#line 1607 "y.tab.c"
+#line 1608 "y.tab.c"
     break;
 
   case 17: /* array_init_list: expr  */
-#line 167 "parser.y"
+#line 168 "parser.y"
                       { (yyval.node) = oprNode(OPR_LIST, 1, (yyvsp[0].node));}
-#line 1613 "y.tab.c"
+#line 1614 "y.tab.c"
     break;
 
   case 18: /* array_init_list: array_init_list ',' expr  */
-#line 168 "parser.y"
+#line 169 "parser.y"
                                { (yyval.node) = oprNode(OPR_LIST, 3, (yyvsp[-2].node), (yyvsp[0].node), NULL); }
-#line 1619 "y.tab.c"
+#line 1620 "y.tab.c"
     break;
 
   case 19: /* array_init_list: arrayInitialiser  */
-#line 169 "parser.y"
+#line 170 "parser.y"
                        { (yyval.node) = oprNode(OPR_LIST, 1, (yyvsp[0].node)); (yyval.node)->exprType.op = T_ARRAY;}
-#line 1625 "y.tab.c"
+#line 1626 "y.tab.c"
     break;
 
   case 20: /* array_init_list: array_init_list ',' arrayInitialiser  */
-#line 170 "parser.y"
+#line 171 "parser.y"
                                            { (yyval.node) = oprNode(OPR_LIST, 3, (yyvsp[-2].node), (yyvsp[0].node), NULL); (yyval.node)->exprType.op = T_ARRAY;}
-#line 1631 "y.tab.c"
+#line 1632 "y.tab.c"
     break;
 
   case 21: /* varDeclaration: varType varNames  */
-#line 178 "parser.y"
+#line 179 "parser.y"
                                  {
     (yyval.node) = oprNode(OPR_VAR_DECL, 1, (yyvsp[0].node));
     printf("Found var decl %d, \n", (yyvsp[0].node)->as.opr.type);
@@ -1707,90 +1708,90 @@ yyreduce:
         }
     }
 }
-#line 1711 "y.tab.c"
+#line 1712 "y.tab.c"
     break;
 
   case 22: /* varType: K_INT  */
-#line 255 "parser.y"
+#line 256 "parser.y"
                {(yyval.iValue) = T_INT;}
-#line 1717 "y.tab.c"
+#line 1718 "y.tab.c"
     break;
 
   case 23: /* varType: K_CHAR  */
-#line 255 "parser.y"
+#line 256 "parser.y"
                                       {(yyval.iValue) = T_CHAR;}
-#line 1723 "y.tab.c"
+#line 1724 "y.tab.c"
     break;
 
   case 24: /* varType: K_FLOAT  */
-#line 255 "parser.y"
+#line 256 "parser.y"
                                                               {(yyval.iValue) = T_FLOAT;}
-#line 1729 "y.tab.c"
+#line 1730 "y.tab.c"
     break;
 
   case 26: /* varNames: varNames ',' varInitialiser  */
-#line 258 "parser.y"
+#line 259 "parser.y"
                                   {(yyval.node) = oprNode(OPR_LIST, 2, (yyvsp[-2].node), (yyvsp[0].node)); }
-#line 1735 "y.tab.c"
+#line 1736 "y.tab.c"
     break;
 
   case 27: /* arraySpecifier: arraySpecifier '[' INTEGER ']'  */
-#line 260 "parser.y"
+#line 261 "parser.y"
                                                {
                                         (yyval.node) = oprNode(OPR_LIST, 2, (yyvsp[-3].node), intNode((yyvsp[-1].iValue)));
                                     }
-#line 1743 "y.tab.c"
+#line 1744 "y.tab.c"
     break;
 
   case 28: /* arraySpecifier: arraySpecifier '[' ']'  */
-#line 263 "parser.y"
+#line 264 "parser.y"
                              {
                             (yyval.node) = oprNode(OPR_LIST, 2, (yyvsp[-2].node), intNode(0));
                         }
-#line 1751 "y.tab.c"
+#line 1752 "y.tab.c"
     break;
 
   case 29: /* arraySpecifier: %empty  */
-#line 266 "parser.y"
+#line 267 "parser.y"
       { (yyval.node) = NULL; }
-#line 1757 "y.tab.c"
+#line 1758 "y.tab.c"
     break;
 
   case 30: /* $@2: %empty  */
-#line 269 "parser.y"
+#line 270 "parser.y"
               {beginScope();}
-#line 1763 "y.tab.c"
+#line 1764 "y.tab.c"
     break;
 
   case 31: /* funcBody: '{' $@2 stmtOrDecl '}'  */
-#line 271 "parser.y"
+#line 272 "parser.y"
               {endScope();}
-#line 1769 "y.tab.c"
+#line 1770 "y.tab.c"
     break;
 
   case 46: /* $@3: %empty  */
-#line 298 "parser.y"
+#line 299 "parser.y"
                  {beginScope();}
-#line 1775 "y.tab.c"
+#line 1776 "y.tab.c"
     break;
 
   case 47: /* forStmt: FOR '(' $@3 forInit ';' forCond ';' forIter ')' stmt  */
-#line 298 "parser.y"
+#line 299 "parser.y"
                                                                           {
     endScope();
 
 }
-#line 1784 "y.tab.c"
+#line 1785 "y.tab.c"
     break;
 
   case 54: /* forIter: %empty  */
-#line 313 "parser.y"
+#line 314 "parser.y"
       {(yyval.node)=NULL;}
-#line 1790 "y.tab.c"
+#line 1791 "y.tab.c"
     break;
 
   case 55: /* assignExpr: IDENTIFIER '=' expr  */
-#line 316 "parser.y"
+#line 317 "parser.y"
                                 {
                 printf("Found assign target\n");
                 Symbol* sym = getSymbol((yyvsp[-2].id).name, identifiers, (yyvsp[-2].id).src, "Variable '%s' not declared", (yyvsp[-2].id).name);
@@ -1799,11 +1800,11 @@ yyreduce:
                 }
                 (yyval.node) = oprNode(OPR_ASSIGN, 2, identifierNode(sym), (yyvsp[0].node));
             }
-#line 1803 "y.tab.c"
+#line 1804 "y.tab.c"
     break;
 
   case 56: /* assignExpr: IDENTIFIER INC  */
-#line 324 "parser.y"
+#line 325 "parser.y"
                      {
                 Symbol* sym = getSymbol((yyvsp[-1].id).name, identifiers, (yyvsp[-1].id).src, "Variable '%s' not declared", (yyvsp[-1].id).name);
                 if(sym->type->op != T_INT && sym->type->op != T_FLOAT){
@@ -1811,11 +1812,11 @@ yyreduce:
                 }
                 (yyval.node) = oprNode(OPR_INC, 1, identifierNode(sym));
             }
-#line 1815 "y.tab.c"
+#line 1816 "y.tab.c"
     break;
 
   case 57: /* assignExpr: IDENTIFIER DEC  */
-#line 331 "parser.y"
+#line 332 "parser.y"
                      {
                 Symbol* sym = getSymbol((yyvsp[-1].id).name, identifiers, (yyvsp[-1].id).src, "Variable '%s' not declared", (yyvsp[-1].id).name);
                 if(sym->type->op != T_INT && sym->type->op != T_FLOAT){
@@ -1823,11 +1824,11 @@ yyreduce:
                 }
                 (yyval.node) = oprNode(OPR_DEC, 1, identifierNode(sym));
             }
-#line 1827 "y.tab.c"
+#line 1828 "y.tab.c"
     break;
 
   case 58: /* assignExpr: arrayExpr '=' expr  */
-#line 338 "parser.y"
+#line 339 "parser.y"
                          {
                 printf("Got array type as %d\n", (yyvsp[-2].node)->exprType.op);
                 if(!typeCheckAssign((yyvsp[-2].node)->exprType.op, (yyvsp[0].node)->exprType.op)){
@@ -1835,193 +1836,193 @@ yyreduce:
                 }
                 (yyval.node) = oprNode(OPR_ASSIGN, 2, (yyvsp[-2].node), (yyvsp[0].node));
             }
-#line 1839 "y.tab.c"
+#line 1840 "y.tab.c"
     break;
 
   case 59: /* assignExpr: arrayExpr INC  */
-#line 345 "parser.y"
+#line 346 "parser.y"
                     {
                 if((yyvsp[-1].node)->exprType.op != T_INT && (yyvsp[-1].node)->exprType.op != T_FLOAT){
                     compileError((yyvsp[-1].node)->src, (yyvsp[-1].node)->src.length + 2, "Only int and float can be incremented");
                 }
                 (yyval.node) = oprNode(OPR_INC, 1, (yyvsp[-1].node));
             }
-#line 1850 "y.tab.c"
+#line 1851 "y.tab.c"
     break;
 
   case 60: /* assignExpr: arrayExpr DEC  */
-#line 351 "parser.y"
+#line 352 "parser.y"
                     {
                 if((yyvsp[-1].node)->exprType.op != T_INT || (yyvsp[-1].node)->exprType.op != T_FLOAT){
                     compileError((yyvsp[-1].node)->src, (yyvsp[-1].node)->src.length+2, "Only int and float can be decremented");
                 }
                 (yyval.node) = oprNode(OPR_DEC, 1, (yyvsp[-1].node));
             }
-#line 1861 "y.tab.c"
+#line 1862 "y.tab.c"
     break;
 
   case 73: /* $@4: %empty  */
-#line 379 "parser.y"
+#line 380 "parser.y"
                         {beginScope();}
-#line 1867 "y.tab.c"
+#line 1868 "y.tab.c"
     break;
 
   case 74: /* blockStmt: '{' $@4 stmtOrDecl '}'  */
-#line 382 "parser.y"
+#line 383 "parser.y"
                         {endScope();}
-#line 1873 "y.tab.c"
+#line 1874 "y.tab.c"
     break;
 
   case 75: /* ifStmt: IF '(' expr ')' stmt  */
-#line 385 "parser.y"
+#line 386 "parser.y"
                                        {printf("Unmatched if statement\n");}
-#line 1879 "y.tab.c"
+#line 1880 "y.tab.c"
     break;
 
   case 76: /* ifStmt: IF '(' expr ')' stmt ELSE stmt  */
-#line 386 "parser.y"
+#line 387 "parser.y"
                                      {printf("Matched if statement\n");}
-#line 1885 "y.tab.c"
+#line 1886 "y.tab.c"
     break;
 
   case 77: /* expr: INTEGER  */
-#line 388 "parser.y"
+#line 389 "parser.y"
               {(yyval.node) = intNode((yyvsp[0].iValue));}
-#line 1891 "y.tab.c"
+#line 1892 "y.tab.c"
     break;
 
   case 78: /* expr: CHARACTER  */
-#line 389 "parser.y"
+#line 390 "parser.y"
                 {(yyval.node) = charNode((yyvsp[0].cValue)); }
-#line 1897 "y.tab.c"
+#line 1898 "y.tab.c"
     break;
 
   case 79: /* expr: IDENTIFIER  */
-#line 390 "parser.y"
+#line 391 "parser.y"
                  { 
             Symbol* foundId = getSymbol((yyvsp[0].id).name, identifiers, (yyvsp[0].id).src, "Identifier '%s' not declared in this scope", (yyvsp[0].id).name);
             (yyval.node) = identifierNode(foundId);
             printf("Idenfitier base type is %d\n", (yyval.node)->exprType.ndim);
         }
-#line 1907 "y.tab.c"
+#line 1908 "y.tab.c"
     break;
 
   case 80: /* expr: FLOAT  */
-#line 395 "parser.y"
+#line 396 "parser.y"
             {(yyval.node) = floatNode((yyvsp[0].fValue));}
-#line 1913 "y.tab.c"
+#line 1914 "y.tab.c"
     break;
 
   case 81: /* expr: STRING  */
-#line 396 "parser.y"
-             {(yyval.node) = strNode((yyvsp[0].sValue), strlen((yyvsp[0].sValue)));}
-#line 1919 "y.tab.c"
+#line 397 "parser.y"
+             {(yyval.node) = strNode((yyvsp[0].sValue), strlen((yyvsp[0].sValue))); printf("String here, %d\n", (yyval.node)->src.length);}
+#line 1920 "y.tab.c"
     break;
 
   case 82: /* expr: callExpr  */
-#line 397 "parser.y"
+#line 398 "parser.y"
                {(yyval.node) = (yyvsp[0].node);}
-#line 1925 "y.tab.c"
+#line 1926 "y.tab.c"
     break;
 
   case 83: /* expr: '-' expr  */
-#line 398 "parser.y"
+#line 399 "parser.y"
                             { (yyval.node) = oprNode('-', 1, (yyvsp[0].node)); typeCheckUnary((yyvsp[0].node)); (yyval.node)->exprType.op = (yyvsp[0].node)->exprType.op;}
-#line 1931 "y.tab.c"
+#line 1932 "y.tab.c"
     break;
 
   case 84: /* expr: '!' expr  */
-#line 399 "parser.y"
+#line 400 "parser.y"
                             { (yyval.node) = oprNode('!', 1, (yyvsp[0].node)); typeCheckUnary((yyvsp[0].node)); (yyval.node)->exprType.op = (yyvsp[0].node)->exprType.op;}
-#line 1937 "y.tab.c"
+#line 1938 "y.tab.c"
     break;
 
   case 85: /* expr: expr '+' expr  */
-#line 400 "parser.y"
+#line 401 "parser.y"
                     { (yyval.node) = oprNode('+', 2, (yyvsp[-2].node), (yyvsp[0].node));     (yyval.node)->exprType.op = typeWiden((yyvsp[-2].node)->exprType.op, (yyvsp[0].node)->exprType.op);}
-#line 1943 "y.tab.c"
+#line 1944 "y.tab.c"
     break;
 
   case 86: /* expr: expr '-' expr  */
-#line 401 "parser.y"
+#line 402 "parser.y"
                     { (yyval.node) = oprNode('-', 2, (yyvsp[-2].node), (yyvsp[0].node));     (yyval.node)->exprType.op = typeWiden((yyvsp[-2].node)->exprType.op, (yyvsp[0].node)->exprType.op);}
-#line 1949 "y.tab.c"
+#line 1950 "y.tab.c"
     break;
 
   case 87: /* expr: expr '*' expr  */
-#line 402 "parser.y"
+#line 403 "parser.y"
                     { (yyval.node) = oprNode('*', 2, (yyvsp[-2].node), (yyvsp[0].node));     (yyval.node)->exprType.op = typeWiden((yyvsp[-2].node)->exprType.op, (yyvsp[0].node)->exprType.op);}
-#line 1955 "y.tab.c"
+#line 1956 "y.tab.c"
     break;
 
   case 88: /* expr: expr '/' expr  */
-#line 403 "parser.y"
+#line 404 "parser.y"
                     { (yyval.node) = oprNode('/', 2, (yyvsp[-2].node), (yyvsp[0].node));     (yyval.node)->exprType.op = typeWiden((yyvsp[-2].node)->exprType.op, (yyvsp[0].node)->exprType.op);}
-#line 1961 "y.tab.c"
+#line 1962 "y.tab.c"
     break;
 
   case 89: /* expr: expr '<' expr  */
-#line 404 "parser.y"
+#line 405 "parser.y"
                     { (yyval.node) = oprNode('<', 2, (yyvsp[-2].node), (yyvsp[0].node));     (yyval.node)->exprType.op = typeWiden((yyvsp[-2].node)->exprType.op, (yyvsp[0].node)->exprType.op);}
-#line 1967 "y.tab.c"
+#line 1968 "y.tab.c"
     break;
 
   case 90: /* expr: expr '>' expr  */
-#line 405 "parser.y"
+#line 406 "parser.y"
                     { (yyval.node) = oprNode('>', 2, (yyvsp[-2].node), (yyvsp[0].node));     (yyval.node)->exprType.op = typeWiden((yyvsp[-2].node)->exprType.op, (yyvsp[0].node)->exprType.op);}
-#line 1973 "y.tab.c"
+#line 1974 "y.tab.c"
     break;
 
   case 91: /* expr: expr GE expr  */
-#line 406 "parser.y"
+#line 407 "parser.y"
                    { (yyval.node) = oprNode(OPR_GE, 2, (yyvsp[-2].node), (yyvsp[0].node));   (yyval.node)->exprType.op = typeWiden((yyvsp[-2].node)->exprType.op, (yyvsp[0].node)->exprType.op);}
-#line 1979 "y.tab.c"
+#line 1980 "y.tab.c"
     break;
 
   case 92: /* expr: expr LE expr  */
-#line 407 "parser.y"
+#line 408 "parser.y"
                    { (yyval.node) = oprNode(OPR_LE, 2, (yyvsp[-2].node), (yyvsp[0].node));   (yyval.node)->exprType.op = typeWiden((yyvsp[-2].node)->exprType.op, (yyvsp[0].node)->exprType.op);}
-#line 1985 "y.tab.c"
+#line 1986 "y.tab.c"
     break;
 
   case 93: /* expr: expr EQ expr  */
-#line 408 "parser.y"
+#line 409 "parser.y"
                    { (yyval.node) = oprNode(OPR_EQ, 2, (yyvsp[-2].node), (yyvsp[0].node));   (yyval.node)->exprType.op = typeWiden((yyvsp[-2].node)->exprType.op, (yyvsp[0].node)->exprType.op);}
-#line 1991 "y.tab.c"
+#line 1992 "y.tab.c"
     break;
 
   case 94: /* expr: expr NE expr  */
-#line 409 "parser.y"
+#line 410 "parser.y"
                    { (yyval.node) = oprNode(OPR_NE, 2, (yyvsp[-2].node), (yyvsp[0].node));   (yyval.node)->exprType.op = typeWiden((yyvsp[-2].node)->exprType.op, (yyvsp[0].node)->exprType.op);}
-#line 1997 "y.tab.c"
+#line 1998 "y.tab.c"
     break;
 
   case 95: /* expr: expr AND expr  */
-#line 410 "parser.y"
+#line 411 "parser.y"
                     { (yyval.node) = oprNode(OPR_AND, 2, (yyvsp[-2].node), (yyvsp[0].node)); (yyval.node)->exprType.op = typeWiden((yyvsp[-2].node)->exprType.op, (yyvsp[0].node)->exprType.op);}
-#line 2003 "y.tab.c"
+#line 2004 "y.tab.c"
     break;
 
   case 96: /* expr: expr OR expr  */
-#line 411 "parser.y"
+#line 412 "parser.y"
                    { (yyval.node) = oprNode(OPR_OR, 2, (yyvsp[-2].node), (yyvsp[0].node));   (yyval.node)->exprType.op = typeWiden((yyvsp[-2].node)->exprType.op, (yyvsp[0].node)->exprType.op);}
-#line 2009 "y.tab.c"
+#line 2010 "y.tab.c"
     break;
 
   case 97: /* expr: '(' expr ')'  */
-#line 412 "parser.y"
+#line 413 "parser.y"
                    { (yyval.node) = (yyvsp[-1].node);   (yyval.node)->exprType.op = (yyvsp[-1].node)->exprType.op;}
-#line 2015 "y.tab.c"
+#line 2016 "y.tab.c"
     break;
 
   case 98: /* expr: arrayExpr  */
-#line 413 "parser.y"
+#line 414 "parser.y"
                 {(yyval.node) = (yyvsp[0].node);       (yyval.node)->exprType.op = (yyvsp[0].node)->exprType.op;}
-#line 2021 "y.tab.c"
+#line 2022 "y.tab.c"
     break;
 
   case 99: /* arrayExpr: expr '[' expr ']'  */
-#line 418 "parser.y"
+#line 419 "parser.y"
                                        {
         printf("Found array expression type %d\n", (yyvsp[-3].node)->exprType.ndim);
         if((yyvsp[-3].node)->exprType.op != T_ARRAY){
@@ -2036,51 +2037,85 @@ yyreduce:
         // $$->exprType.op = $1->exprType.op->type;
         (yyval.node)->src.length = (yyvsp[-3].node)->src.length + (yyvsp[-1].node)->src.length + 2;
     }
-#line 2040 "y.tab.c"
+#line 2041 "y.tab.c"
     break;
 
   case 100: /* callExpr: IDENTIFIER '(' arg_list ')'  */
-#line 433 "parser.y"
+#line 434 "parser.y"
                                       {
                 Symbol* callee = lookup((yyvsp[-3].id).name, identifiers);
                 if(!callee){
                     // compileError("Error: Function '%s' not defined", $1);
                     compileError((yyvsp[-3].id).src, strlen((yyvsp[-3].id).name), "Function '%s' not defined", (yyvsp[-3].id).name);
-                    exit(1);
+                }
+                if(callee->type->op != T_FUNCTION){
+                    compileError((yyvsp[-3].id).src, strlen((yyvsp[-3].id).name), "Identifier '%s' is not a function", (yyvsp[-3].id).name);
                 }
                 (yyval.node) = oprNode(OPR_CALL, 1, identifierNode(callee), (yyvsp[-1].node));
-                // $$.exprType.op = callee->type->op;
+                (yyval.node)->exprType.op = callee->type->type->op;
+                //Type check all parameters
+                Node *param = (yyvsp[-1].node);
+                int i=callee->type->size-1;
+                printf("Starting with %d params\n", i);
+                if(param){
+                    printf("here\n");
+                    while(param->as.opr.nops==2 && i >= 0){
+                        printf("Comparing with original type %d\n", param->as.opr.operands[1]->exprType.op);
+                        if(!typeCheckAssign(callee->type->proto[i]->op, param->as.opr.operands[1]->exprType.op)){
+                            compileError(param->as.opr.operands[1]->src, param->as.opr.operands[1]->src.length, "Type mismatch in function call to '%s'", (yyvsp[-3].id).name);
+                        }
+                        param = param->as.opr.operands[0];
+                        i--;
+                    }
+                    printf("Comparing with original type %d %d\n", param->exprType.op, i);
+                    if(i<0) {
+                            compileError((yyvsp[-3].id).src, strlen((yyvsp[-3].id).name), "Too many parameters in function call to '%s'", (yyvsp[-3].id).name);
+                    }
+                    if(!typeCheckAssign(callee->type->proto[i]->op, param->exprType.op)){
+                        compileError((yyvsp[-3].id).src, strlen((yyvsp[-3].id).name), "Type mismatch in function call to '%s'", (yyvsp[-3].id).name);
+                    }
+                    i--;
+                }
+                if(i >= 0){
+                    compileError((yyvsp[-3].id).src, strlen((yyvsp[-3].id).name), "Too few parameters in function call to '%s'; expected %d", (yyvsp[-3].id).name, callee->type->size);
+                }
                 printNode((yyval.node));
     }
-#line 2056 "y.tab.c"
+#line 2085 "y.tab.c"
     break;
 
   case 101: /* arg_list: expr  */
-#line 445 "parser.y"
+#line 474 "parser.y"
                {(yyval.node) = (yyvsp[0].node);}
-#line 2062 "y.tab.c"
+#line 2091 "y.tab.c"
     break;
 
   case 102: /* arg_list: arg_list ',' expr  */
-#line 446 "parser.y"
+#line 475 "parser.y"
                         {(yyval.node) = oprNode(OPR_LIST, 2, (yyvsp[-2].node), (yyvsp[0].node));}
-#line 2068 "y.tab.c"
+#line 2097 "y.tab.c"
+    break;
+
+  case 103: /* arg_list: %empty  */
+#line 476 "parser.y"
+      {(yyval.node) = NULL;}
+#line 2103 "y.tab.c"
     break;
 
   case 106: /* continueStmt: CONTINUE  */
-#line 454 "parser.y"
+#line 483 "parser.y"
                        {(yyval.node) = oprNode(OPR_CONTINUE, 0);}
-#line 2074 "y.tab.c"
+#line 2109 "y.tab.c"
     break;
 
   case 107: /* breakStmt: BREAK  */
-#line 456 "parser.y"
+#line 485 "parser.y"
                  {(yyval.node) = oprNode(OPR_BREAK, 0);}
-#line 2080 "y.tab.c"
+#line 2115 "y.tab.c"
     break;
 
 
-#line 2084 "y.tab.c"
+#line 2119 "y.tab.c"
 
       default: break;
     }
@@ -2273,7 +2308,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 458 "parser.y"
+#line 487 "parser.y"
 
 void typeCheckArrayInitialiser(Type* elementType, Node* expr){
     Node* exprList = expr;
