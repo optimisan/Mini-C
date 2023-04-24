@@ -745,7 +745,7 @@ static const yytype_int16 yyrline[] =
      376,   376,   378,   380,   380,   386,   387,   389,   390,   391,
      396,   397,   398,   399,   400,   401,   402,   403,   404,   405,
      406,   407,   408,   409,   410,   411,   412,   413,   414,   419,
-     434,   474,   475,   476,   479,   480,   483,   485
+     434,   475,   476,   477,   480,   481,   484,   486
 };
 #endif
 
@@ -2051,8 +2051,7 @@ yyreduce:
                 if(callee->type->op != T_FUNCTION){
                     compileError((yyvsp[-3].id).src, strlen((yyvsp[-3].id).name), "Identifier '%s' is not a function", (yyvsp[-3].id).name);
                 }
-                (yyval.node) = oprNode(OPR_CALL, 1, identifierNode(callee), (yyvsp[-1].node));
-                (yyval.node)->exprType.op = callee->type->type->op;
+                
                 //Type check all parameters
                 Node *param = (yyvsp[-1].node);
                 int i=callee->type->size-1;
@@ -2079,43 +2078,45 @@ yyreduce:
                 if(i >= 0){
                     compileError((yyvsp[-3].id).src, strlen((yyvsp[-3].id).name), "Too few parameters in function call to '%s'; expected %d", (yyvsp[-3].id).name, callee->type->size);
                 }
+                (yyval.node) = oprNode(OPR_CALL, 2, identifierNode(callee), (yyvsp[-1].node));
+                (yyval.node)->exprType.op = callee->type->type->op;
                 printNode((yyval.node));
     }
-#line 2085 "y.tab.c"
+#line 2086 "y.tab.c"
     break;
 
   case 101: /* arg_list: expr  */
-#line 474 "parser.y"
-               {(yyval.node) = (yyvsp[0].node);}
-#line 2091 "y.tab.c"
+#line 475 "parser.y"
+               {(yyval.node) = oprNode(OPR_LIST, 1,(yyvsp[0].node));}
+#line 2092 "y.tab.c"
     break;
 
   case 102: /* arg_list: arg_list ',' expr  */
-#line 475 "parser.y"
+#line 476 "parser.y"
                         {(yyval.node) = oprNode(OPR_LIST, 2, (yyvsp[-2].node), (yyvsp[0].node));}
-#line 2097 "y.tab.c"
+#line 2098 "y.tab.c"
     break;
 
   case 103: /* arg_list: %empty  */
-#line 476 "parser.y"
+#line 477 "parser.y"
       {(yyval.node) = NULL;}
-#line 2103 "y.tab.c"
+#line 2104 "y.tab.c"
     break;
 
   case 106: /* continueStmt: CONTINUE  */
-#line 483 "parser.y"
+#line 484 "parser.y"
                        {(yyval.node) = oprNode(OPR_CONTINUE, 0);}
-#line 2109 "y.tab.c"
+#line 2110 "y.tab.c"
     break;
 
   case 107: /* breakStmt: BREAK  */
-#line 485 "parser.y"
+#line 486 "parser.y"
                  {(yyval.node) = oprNode(OPR_BREAK, 0);}
-#line 2115 "y.tab.c"
+#line 2116 "y.tab.c"
     break;
 
 
-#line 2119 "y.tab.c"
+#line 2120 "y.tab.c"
 
       default: break;
     }
@@ -2308,7 +2309,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 487 "parser.y"
+#line 488 "parser.y"
 
 void typeCheckArrayInitialiser(Type* elementType, Node* expr){
     Node* exprList = expr;

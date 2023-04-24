@@ -440,8 +440,7 @@ callExpr: IDENTIFIER '(' arg_list ')' {
                 if(callee->type->op != T_FUNCTION){
                     compileError($1.src, strlen($1.name), "Identifier '%s' is not a function", $1.name);
                 }
-                $$ = oprNode(OPR_CALL, 1, identifierNode(callee), $3);
-                $$->exprType.op = callee->type->type->op;
+                
                 //Type check all parameters
                 Node *param = $3;
                 int i=callee->type->size-1;
@@ -468,10 +467,12 @@ callExpr: IDENTIFIER '(' arg_list ')' {
                 if(i >= 0){
                     compileError($1.src, strlen($1.name), "Too few parameters in function call to '%s'; expected %d", $1.name, callee->type->size);
                 }
+                $$ = oprNode(OPR_CALL, 2, identifierNode(callee), $3);
+                $$->exprType.op = callee->type->type->op;
                 printNode($$);
     }
 
-arg_list: expr {$$ = $1;}
+arg_list: expr {$$ = oprNode(OPR_LIST, 1,$1);}
     | arg_list ',' expr {$$ = oprNode(OPR_LIST, 2, $1, $3);}
     | {$$ = NULL;}
     ;

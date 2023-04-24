@@ -9,7 +9,7 @@
 // char g[][][8][4] = 'k', k = 8;
 // int g[] = {3}, k = {6};
 
-float main(int i)
+int main(int i)
 {
   // char a[] = {"61", "42"};
   char a[][3] = {{'a'}};
