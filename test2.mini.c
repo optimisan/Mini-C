@@ -8,7 +8,7 @@
 
 // char g[][][8][4] = 'k', k = 8;
 // int g[] = {3}, k = {6};
-
+return 5;
 int main(int i)
 {
   // char a[] = {"61", "42"};
@@ -19,6 +19,7 @@ int main(int i)
     main(main(2));
     // a[2][3] = a[1][3];
   }
+  return -1;
   // a[1] = '4';
   // b = a(2);
   // void data = b;

@@ -8,6 +8,7 @@
 #include "./util/token.h"
 
 char *currentFileName;
+Type* currentFunctionType;
 extern int level;
 extern int lineno, col;
 
@@ -81,7 +82,7 @@ program: declarations EOF_TOKEN {printf("Program end\n"); return 0;}
     ;
 
 declarations: declarations declaration { $$ = oprNode(OPR_LIST, 2, $1, $2); }
-    |
+    | {$$ = NULL;}
     ;
 
 declaration: functionDecl
@@ -101,6 +102,7 @@ functionDecl: varType IDENTIFIER '(' param_list ')'
                             funcType->op = T_FUNCTION;
                             funcType->type = malloc(sizeof(Type));
                             funcType->type->op = $1;
+                            currentFunctionType = funcType;
                             int numParams=0;
                             Node* temp = $4;
                             while(temp){
@@ -131,7 +133,12 @@ functionDecl: varType IDENTIFIER '(' param_list ')'
             funcBody
                 {
                     endScope();
+                    Symbol* funcSymbol = lookup($2.name, identifiers);
+
+                    $$ = oprNode(OPR_FUNC, 2, identifierNode(funcSymbol), $<node>6);
+                    currentFunctionType = NULL;
                 }
+                ;
 
 param_list: varType IDENTIFIER {
                         Symbol* psym = install($2.name, &identifiers, level, $2.src);
@@ -269,11 +276,12 @@ arraySpecifier: arraySpecifier '[' INTEGER ']' {
 
 funcBody: '{' {beginScope();}
             stmtOrDecl
-          '}' {endScope();}
+          '}' {endScope(); $$ = $<node>2;}
+          ;
 
-stmtOrDecl: stmtOrDecl stmt
-    | stmtOrDecl varDeclaration ';'
-    | 
+stmtOrDecl: stmtOrDecl stmt {$$ = oprNode(OPR_LIST, 2, $1, $2);}
+    | stmtOrDecl varDeclaration ';' {$$ = oprNode(OPR_LIST, 2, $1, $2);}
+    | {$$ = NULL;}
     ;
 
 
@@ -281,7 +289,7 @@ stmtOrDecl: stmtOrDecl stmt
     |
     ; */
 
-stmt: ';'
+stmt: ';' {$$ = NULL;}
     | blockStmt
     /* | varDeclaration ';' */
     | assignExpr ';'
@@ -290,7 +298,7 @@ stmt: ';'
     | ifStmt
     | whileStmt
     | forStmt
-    | switchStmt
+    /* | switchStmt */
     | returnStmt ';'
     | breakStmt ';'
     | continueStmt ';'
@@ -303,11 +311,11 @@ forStmt: FOR '(' {beginScope();} forInit ';' forCond ';' forIter ')' stmt {
 
 forInit: assignExpr
     | varDeclaration
-    | 
+    | {$$ = NULL;}
     ;
 
 forCond: expr
-    | 
+    | {$$ = NULL;}
     ;
 
 forIter: assignExpr
@@ -375,12 +383,12 @@ caseLabel: caseType expr ':' ;
 
 caseType: CASE | DEFAULT ;
 
-whileStmt: WHILE '(' expr ')' stmt
+whileStmt: WHILE '(' expr ')' stmt {$$ = oprNode(OPR_WHILE, 2, $3, $5);}
 
 blockStmt: '{'          {beginScope();}
             stmtOrDecl 
            '}'
-                        {endScope();}
+                        {endScope(); $$ = $<node>2;}
             ;
 
 ifStmt: IF '(' expr ')' stmt %prec IFX {printf("Unmatched if statement\n");}
@@ -477,8 +485,21 @@ arg_list: expr {$$ = oprNode(OPR_LIST, 1,$1);}
     | {$$ = NULL;}
     ;
 
-returnStmt: RETURN 
-    | RETURN expr
+returnStmt: RETURN {
+
+                Coordinate src;
+                src.line = lineno;
+                src.col = 0;
+                compileError(src, 0, "Expected an expression to return");
+                $$ = oprNode(OPR_RETURN, 0);
+            } 
+        | RETURN expr {
+            printf("Checking types %d %d\n", currentFunctionType->type->op, $2->exprType.op);
+            if(!typeCheckAssign(currentFunctionType->type->op, $2->exprType.op)){
+                compileError($2->src, $2->src.length, "Type mismatch in return statement");
+            }
+            $$ = oprNode(OPR_RETURN, 1, $2);
+        }
     ;
 
 continueStmt: CONTINUE {$$ = oprNode(OPR_CONTINUE, 0);}
