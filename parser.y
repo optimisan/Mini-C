@@ -6,19 +6,24 @@
 #include "./util/AST.h"
 #include "./util/symbol.h"
 #include "./util/token.h"
+#include "./backend/backend.h"
 
 char *currentFileName;
 Type* currentFunctionType;
 extern int level;
 extern int lineno, col;
+int templineno, tempcol;
 
 int yyerror(char *s);
 Symbol* getSymbol(char* name, SymbolTable* table, Coordinate src, char* format, ...);
 void compileError(Coordinate pos, int lexemeLength, char *format, ...);
+void errorMessage(Coordinate pos, int lexemeLength, char *format, ...);
 int typeCheckAssign(TypeEnum t1, TypeEnum t2);
 TypeEnum typeWiden(TypeEnum t1, TypeEnum t2);
 void typeCheckUnary(Node* t);
 void typeCheckArrayInitialiser(Type* elementType, Node* expr);
+
+Node* param_list_node, *funcBodyNode;
 int yylex();
 %}
 
@@ -65,7 +70,7 @@ int yylex();
 %left AND OR
 %left GE LE EQ NE '>' '<'
 %left '+' '-'
-%left '*' '/'
+%left '*' '/' '%'
 /* Math op */
 %token INC DEC
 %nonassoc UMINUS
@@ -78,10 +83,14 @@ int yylex();
 
 %%
 
-program: declarations EOF_TOKEN {printf("Program end\n"); return 0;}
+program: declarations EOF_TOKEN { 
+                        printf("Program end\n"); 
+                        backend($1, currentFileName);
+                        return 0;
+                    }
     ;
 
-declarations: declarations declaration { $$ = oprNode(OPR_LIST, 2, $1, $2); }
+declarations: declarations declaration { $$ = oprNode(OPR_DECL_LIST, 2, $1, $2); }
     | {$$ = NULL;}
     ;
 
@@ -107,48 +116,51 @@ functionDecl: varType IDENTIFIER '(' param_list ')'
                             Node* temp = $4;
                             while(temp){
                                 numParams++;
-                                if(temp->as.opr.nops == 3)
-                                    temp = temp->as.opr.operands[1];
+                                if(temp->as.opr.nops == 2)
+                                    temp = temp->as.opr.operands[0];
                                 else temp = NULL;
                             }
                             funcType->size = numParams;
                             funcType->proto = malloc(sizeof(Type*) * numParams);
                             Node* param = $4;
                             int i=0;
+                            printf("donefg %d\n", numParams);
                             while(param){
                                 if(param->as.opr.nops == 2){
                                     //last param
                                     // printf("Type of param is %d\n", param->as.opr.operands[0]->type);
                                     funcType->proto[i] = param->as.opr.operands[1]->as.symbol->type;
                                 } else {
-                                    funcType->proto[i] = param->as.opr.operands[2]->as.symbol->type;
+                                    funcType->proto[i] = param->as.opr.operands[0]->as.symbol->type;
                                 }
                                 i++;
-                                if(param->as.opr.nops == 3)
-                                    param = param->as.opr.operands[1];
+                                if(param->as.opr.nops == 2)
+                                    param = param->as.opr.operands[0];
                                 else param = NULL;
                             }
+                            printf("func proto %d\n", funcType->proto[0]->op);
                             beginScope();
                         }
             funcBody
                 {
                     endScope();
                     Symbol* funcSymbol = lookup($2.name, identifiers);
-
-                    $$ = oprNode(OPR_FUNC, 2, identifierNode(funcSymbol), $<node>6);
+                    // printNode(param_list_node);
+                    $<node>$ = oprNode(OPR_FUNC, 3, identifierNode(funcSymbol), param_list_node, funcBodyNode);
                     currentFunctionType = NULL;
                 }
                 ;
 
 param_list: varType IDENTIFIER {
                         Symbol* psym = install($2.name, &identifiers, level, $2.src);
-                        $$ = oprNode(OPR_LIST, 2, $1, identifierNode(psym)); 
+                        $$ = oprNode(OPR_LIST, 1, identifierNode(psym)); 
                         printf("Found param %s\n", $2.name);
                         Type* paramType = malloc(sizeof(Type));
                         paramType->op = $1;
                         paramType->type=NULL;
                         paramType->sym = psym;
                         psym->type = paramType;
+                        param_list_node = $$;
                     }
     | param_list ',' varType IDENTIFIER {
                         printf("Found param %s\n", $4.name);
@@ -156,19 +168,26 @@ param_list: varType IDENTIFIER {
                         if(psym->type){
                             compileError($4.src, strlen($4.name), "Parameter %s already declared", $4.name);
                         }
-                        $$ = oprNode(OPR_LIST, 3, $1, identifierNode(psym), $3);
+                        Type* paramType = malloc(sizeof(Type));
+                        paramType->op = $3;
+                        paramType->type=NULL;
+                        paramType->sym = psym;
+                        psym->type = paramType;
+                        $$ = oprNode(OPR_LIST, 2, $1, identifierNode(psym));
+                        param_list_node = $$;
                     }
-    | {$$=NULL;}
+    | {$$=NULL; param_list_node = NULL;}
     ;
 
 varInitialiser: IDENTIFIER arraySpecifier {
                                     $$ = oprNode('=', 2, identifierNode(install($1.name, &identifiers, level, $1.src)), $2);
-                                    printf("var init");
+                                    $$->src = $1.src;
                                     }
     | IDENTIFIER arraySpecifier '=' expr {
                                     $$ = oprNode('=', 3, identifierNode(install($1.name, &identifiers, level, $1.src)), $2, $4);
+                                    $$->src = $1.src;
                                     }
-    | IDENTIFIER arraySpecifier '=' arrayInitialiser {$$ = oprNode('=', 3, identifierNode(install($1.name, &identifiers, level, $1.src)), $2, $4);}
+    | IDENTIFIER arraySpecifier '=' arrayInitialiser {$$ = oprNode('=', 3, identifierNode(install($1.name, &identifiers, level, $1.src)), $2, $4); $$->src = $1.src;}
 
 arrayInitialiser: '{' array_init_list '}' { $$ = $2; $$->exprType.op = T_ARRAY;}
 
@@ -201,7 +220,8 @@ varDeclaration: varType varNames {
         Symbol* installed = install(varSymbol->name, &identifiers, level, varSymbol->src);
         Coordinate src = varSymbol->src;
         if(installed->type){
-            compileError(varSymbol->src, strlen(varSymbol->name), "Variable %s already declared", varSymbol->name);
+            errorMessage(varInitialiser->src, strlen(varSymbol->name), "Error: Variable '%s' already declared", varSymbol->name);
+            compileError(varSymbol->src, strlen(varSymbol->name), "Declared here");
         }
         Type* type = malloc(sizeof(Type));
         type->sym = installed;
@@ -274,20 +294,20 @@ arraySpecifier: arraySpecifier '[' INTEGER ']' {
     | { $$ = NULL; }
     ;
 
-funcBody: '{' {beginScope();}
+funcBody: '{' {beginScope(); $<node>$ = NULL;}
             stmtOrDecl
-          '}' {endScope(); $$ = $<node>2;}
+          '}' {endScope(); $$ = $<node>2; printf("Printing stmtordecl\n"); printNode(funcBodyNode);}
           ;
 
-stmtOrDecl: stmtOrDecl stmt {$$ = oprNode(OPR_LIST, 2, $1, $2);}
-    | stmtOrDecl varDeclaration ';' {$$ = oprNode(OPR_LIST, 2, $1, $2);}
-    | {$$ = NULL;}
+stmtOrDecl: stmtOrDecl stmt {$$ = oprNode(OPR_LIST, 2, $1, $2); funcBodyNode = $$;}
+    | stmtOrDecl varDeclaration ';' {$$ = oprNode(OPR_LIST, 2, $1, $2); funcBodyNode = $$;}
+    | {$$ = NULL; funcBodyNode = $$;}
     ;
 
 
-/* stmtList: stmtList stmt
+stmtList: stmtList stmt
     |
-    ; */
+    ;
 
 stmt: ';' {$$ = NULL;}
     | blockStmt
@@ -298,7 +318,7 @@ stmt: ';' {$$ = NULL;}
     | ifStmt
     | whileStmt
     | forStmt
-    /* | switchStmt */
+    | switchStmt
     | returnStmt ';'
     | breakStmt ';'
     | continueStmt ';'
@@ -323,7 +343,7 @@ forIter: assignExpr
     ;
 
 assignExpr: IDENTIFIER '=' expr {
-                printf("Found assign target\n");
+                // printf("Found assign target\n");
                 Symbol* sym = getSymbol($1.name, identifiers, $1.src, "Variable '%s' not declared", $1.name);
                 if(!typeCheckAssign(sym->type->op, $3->exprType.op)){
                     compileError($1.src, strlen($1.name), "Type mismatch in assignment %s", $1.name);
@@ -365,7 +385,12 @@ assignExpr: IDENTIFIER '=' expr {
             }
     ;
 
-switchStmt: SWITCH '(' expr ')' switchBody
+switchStmt: 
+    SWITCH          { errorMessage((Coordinate){lineno, col-6, 0}, 6, 
+                                    ANSI_COLOR_BOLD ANSI_COLOR_BLUE 
+                                    "Warning: " ANSI_COLOR_RESET "Switch statement is not implemented");
+                    }
+    '(' expr ')' switchBody { $$ = NULL; }
 
 switchBody: '{' switches '}'
 
@@ -373,13 +398,18 @@ switches: cases
     |
     ;
 
-cases: caseLabel 
-    | caseLabel stmt
-    | cases caseLabel 
-    | cases caseLabel stmt
+cases:caseLabel stmtList
+    | cases caseLabel stmtList
     ;
 
-caseLabel: caseType expr ':' ;
+caseLabel: caseType {templineno = lineno; tempcol = col- 4;} expr ':' {
+                if($3->type!= NODE_LITERAL){
+                    compileError((Coordinate){templineno, tempcol, 0}, $3->src.length + 5, "Case label must be a constant");
+                }
+                if($3->exprType.op != T_INT){
+                    compileError((Coordinate){templineno, tempcol, 0}, $3->src.length+5, "Case label must be an integer");
+                }
+} ;
 
 caseType: CASE | DEFAULT ;
 
@@ -412,6 +442,7 @@ expr: INTEGER {$$ = intNode($1);}
     | expr '/' expr { $$ = oprNode('/', 2, $1, $3);     $$->exprType.op = typeWiden($1->exprType.op, $3->exprType.op);}
     | expr '<' expr { $$ = oprNode('<', 2, $1, $3);     $$->exprType.op = typeWiden($1->exprType.op, $3->exprType.op);}
     | expr '>' expr { $$ = oprNode('>', 2, $1, $3);     $$->exprType.op = typeWiden($1->exprType.op, $3->exprType.op);}
+    | expr '%' expr { $$ = oprNode('%', 2, $1, $3);     $$->exprType.op = T_INT; if($1->exprType.op != T_INT || $3->exprType.op != T_INT){compileError($1->src, $1->src.length + $3->src.length, "Modulo operator only works on integers");}}
     | expr GE expr { $$ = oprNode(OPR_GE, 2, $1, $3);   $$->exprType.op = typeWiden($1->exprType.op, $3->exprType.op);}
     | expr LE expr { $$ = oprNode(OPR_LE, 2, $1, $3);   $$->exprType.op = typeWiden($1->exprType.op, $3->exprType.op);}
     | expr EQ expr { $$ = oprNode(OPR_EQ, 2, $1, $3);   $$->exprType.op = typeWiden($1->exprType.op, $3->exprType.op);}
@@ -432,7 +463,7 @@ arrayExpr: expr '[' expr ']' %prec ARR {
         if($3->exprType.op != T_INT){
             compileError($3->src, $3->src.length, "Only int types can be used as indices.");
         }
-        $$ = oprNode(OPR_ARRAY_INDEX, 2, $1, $3);
+        $$ = oprNode('[', 2, $1, $3);
         $$->exprType.op = $1->exprType.ndim == 1 ? $1->exprType.base : T_ARRAY;
         $$->exprType.ndim = $1->exprType.ndim - 1;
         // $$->exprType.op = $1->exprType.op->type;
@@ -456,14 +487,15 @@ callExpr: IDENTIFIER '(' arg_list ')' {
                 if(param){
                     printf("here\n");
                     while(param->as.opr.nops==2 && i >= 0){
-                        printf("Comparing with original type %d\n", param->as.opr.operands[1]->exprType.op);
+                        printf("Comparing with original type %d\n", callee->type->proto[i]->op);
                         if(!typeCheckAssign(callee->type->proto[i]->op, param->as.opr.operands[1]->exprType.op)){
                             compileError(param->as.opr.operands[1]->src, param->as.opr.operands[1]->src.length, "Type mismatch in function call to '%s'", $1.name);
                         }
                         param = param->as.opr.operands[0];
                         i--;
                     }
-                    printf("Comparing with original type %d %d\n", param->exprType.op, i);
+                    printf("inside %d\n", callee->type->proto[i] == NULL);
+                    printf("Comparing with original type %d \n", /* param->exprType.op, */ callee->type->proto[i]->op);
                     if(i<0) {
                             compileError($1.src, strlen($1.name), "Too many parameters in function call to '%s'", $1.name);
                     }
@@ -480,13 +512,12 @@ callExpr: IDENTIFIER '(' arg_list ')' {
                 printNode($$);
     }
 
-arg_list: expr {$$ = oprNode(OPR_LIST, 1,$1);}
+arg_list: expr {$$ = $1;/* oprNode(OPR_LIST, 1,$1); */}
     | arg_list ',' expr {$$ = oprNode(OPR_LIST, 2, $1, $3);}
     | {$$ = NULL;}
     ;
 
 returnStmt: RETURN {
-
                 Coordinate src;
                 src.line = lineno;
                 src.col = 0;
@@ -618,11 +649,13 @@ Symbol* getSymbol(char* name, SymbolTable* table, Coordinate src, char* format, 
 }
 
 
+
 /**
     * Prints a message to stderr and exits the program
     * @param format The format string
     * @param ... The arguments to the format string
 */
+
 void compileError(Coordinate src, int lexemeLength, char* format, ...){
     va_list args;
     va_start(args, format);
@@ -633,6 +666,16 @@ void compileError(Coordinate src, int lexemeLength, char* format, ...){
     point_at_in_line(src.line-1, src.col -1 , src.col + lexemeLength -1 );
     va_end(args);
     exit(1);
+}
+// Prints the error but does not exit.
+void errorMessage(Coordinate src, int lexemeLength, char* format, ...){
+    va_list args;
+    va_start(args, format);
+    fprintf(stderr, ANSI_COLOR_BOLD "%s[%d:%d] " ANSI_COLOR_RESET, currentFileName, src.line, src.col);
+    vfprintf(stderr, format, args);
+    fprintf(stderr, "\n");
+    point_at_in_line(src.line-1, src.col -1 , src.col + lexemeLength -1 );
+    va_end(args);
 }
 /* int main(int argc, char* argv[]){
     return 0;

@@ -79,7 +79,10 @@ typedef struct SymbolTable
   Symbol *all;
 } SymbolTable;
 
+Type *newType(TypeEnum typeEnum);
+
 void initSymbolTable();
+
 SymbolTable *newTable(SymbolTable *table, int level);
 Symbol *install(char *name, SymbolTable **table, int level, Coordinate src);
 Symbol *lookup(char *name, SymbolTable *table);

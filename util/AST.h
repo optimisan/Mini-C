@@ -28,7 +28,7 @@ typedef enum
 {
   OPR_VAR_DECL,
   OPR_ASSIGN,
-  OPR_ARRAY_INDEX,
+  OPR_DECL_LIST,
   OPR_IF,
   OPR_WHILE,
   OPR_FOR,
@@ -54,6 +54,7 @@ typedef enum
   OPR_NE,
   OPR_AND,
   OPR_OR,
+  // Other math are ascii
 } OprType;
 
 struct Node;

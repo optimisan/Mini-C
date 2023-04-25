@@ -1,0 +1,6 @@
+IR for testir.mini.c
+OP_FUNC t0 
+OP_PARAM t2 
+OP_PARAM t1 
+OP_ASSIGN 3 t1 
+OP_ASSIGN 6.500000 t1 

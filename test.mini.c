@@ -66,14 +66,20 @@ typedef struct
 {
   int a;
 } st;
+void test(void *a)
+{
+  printf("got as %d\n", *(int *)a);
+}
 int main()
 {
   // point_at_in_line(3, 5, 600);
-  st *a = malloc(sizeof(st));
-  a->a = 10;
-  hashmap *m = hashmap_create();
-  hashmap_get_set(m, "a", 1, (uintptr_t *)&a);
-  st *b;
-  hashmap_get(m, "a", 1, (uintptr_t *)&b);
-  printf("%d", b->a);
+  // st *a = malloc(sizeof(st));
+  // a->a = 10;
+  // hashmap *m = hashmap_create();
+  // hashmap_get_set(m, "a", 1, (uintptr_t *)&a);
+  // st *b;
+  // hashmap_get(m, "a", 1, (uintptr_t *)&b);
+  // printf("%d", b->a);
+  int a = 4;
+  test(&a);
 }

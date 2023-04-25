@@ -91,3 +91,11 @@ void endScope()
   }
   level--;
 }
+
+Type *newType(TypeEnum typeEnum)
+{
+  Type *type = malloc(sizeof(Type));
+  memset(type, 0, sizeof(Type));
+  type->op = typeEnum;
+  return type;
+}

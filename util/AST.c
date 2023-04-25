@@ -194,6 +194,11 @@ void freeNode(Node *node)
 
 void printNode(Node *node)
 {
+  if (!node)
+  {
+    printf("null");
+    return;
+  }
   switch (node->type)
   {
   case NODE_LITERAL:
@@ -216,7 +221,7 @@ void printNode(Node *node)
     printf("SYM %s", node->as.symbol->name);
     break;
   case NODE_OPR:
-    printf("NODE_OPR ");
+    // printf("NODE_OPR ");
     switch (node->as.opr.type)
     {
     case OPR_ASSIGN:
@@ -246,10 +251,20 @@ void printNode(Node *node)
     case OPR_SCAN:
       printf("SCAN");
       break;
-    case OPR_ARRAY_INDEX:
-      printf("array");
+    case '[':
+      printf("array_index");
+      break;
+    case OPR_LIST:
+      printf("list");
+      break;
+    case OPR_DECL_LIST:
+      printf("decl_list");
+      break;
+    case OPR_VAR_DECL:
+      printf("var_decl");
       break;
     default:
+      printf("%c", node->as.opr.type);
       break;
     }
     printf("(");

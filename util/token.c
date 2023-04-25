@@ -75,8 +75,10 @@ char *tokenStr(int token)
   case EOF_TOKEN:
     return "EOF_TOKEN";
   default:
+  {
     char *s = malloc(1);
     s[0] = token;
     return s;
+  }
   }
 }
