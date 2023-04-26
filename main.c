@@ -3,6 +3,7 @@
 #include "./util/token.h"
 #include "./util/AST.h"
 #include "./util/symbol.h"
+#include "./backend/built-in-functions.h"
 #include "y.tab.h"
 
 // extern yyin;
@@ -44,6 +45,7 @@ int main(int argc, char *argv[])
   // return 0;
   // printf("Starting parser\n");
   initSymbolTable();
+  installBuiltInFunctions(globals);
   int error = yyparse();
   if (error)
   {

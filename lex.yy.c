@@ -1012,7 +1012,7 @@ YY_RULE_SETUP
 case 35:
 YY_RULE_SETUP
 #line 92 "tokenizer.l"
-{yylval.cValue = yytext[0]; return CHARACTER;}
+{yylval.cValue = yytext[1]; return CHARACTER;}
 	YY_BREAK
 /* Comments*/
 /* "//"[^\n]*\n { lineno++; } */

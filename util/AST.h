@@ -58,16 +58,16 @@ typedef enum
 } OprType;
 
 struct Node;
-
+typedef struct exprType
+{
+  TypeEnum op;
+  int ndim;
+  TypeEnum base;
+} ExprType;
 typedef struct Node
 {
   NodeType type;
-  struct exprType
-  {
-    TypeEnum op;
-    int ndim;
-    TypeEnum base;
-  } exprType;
+  ExprType exprType;
   Coordinate src;
   union
   {
@@ -92,6 +92,7 @@ Node *identifierNode(Symbol *symbol);
 Node *oprNode(OprType type, int nops, ...);
 Node *stmtNode(OprType type, int nops, ...);
 
+void freeFunctionAST(Node *node);
 void freeNode(Node *node);
 void printNode(Node *node);
 

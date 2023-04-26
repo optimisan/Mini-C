@@ -42,17 +42,18 @@ Instruction *newInstruction(InstType op, Address *arg1, Address *arg2, Address *
   instruction->result = result;
   return instruction;
 }
-Address *newIntAddress(TypeEnum type, int value, Coordinate src)
+Address *newIntAddress(int value, Coordinate src)
 {
-  return newValueAddress(type, &value, src);
+  return newValueAddress(T_INT, &value, src);
 }
-Address *newCharAddress(TypeEnum type, char value, Coordinate src)
+Address *newCharAddress(char value, Coordinate src)
 {
-  return newValueAddress(type, &value, src);
+  printf("Adding a character %c\n", value);
+  return newValueAddress(T_CHAR, &value, src);
 }
-Address *newFloatAddress(TypeEnum type, float value, Coordinate src)
+Address *newFloatAddress(float value, Coordinate src)
 {
-  return newValueAddress(type, &value, src);
+  return newValueAddress(T_FLOAT, &value, src);
 }
 Address *newValueAddress(TypeEnum type, void *value, Coordinate src)
 {
@@ -83,6 +84,7 @@ Address *functionAddress(Symbol *symbol, IR *ir)
   address->id = id;
   address->isConstant = 0;
   address->src = symbol->src;
+  printf("Got proto number os %d\n", symbol->type->size);
   address->type = symbol->type;
   return address;
 }
@@ -97,6 +99,15 @@ Address *symbolAddress(Symbol *symbol, IR *ir)
   address->type = symbol->type;
   return address;
 }
+Address *newLabelAddress()
+{
+  Address *address = (Address *)malloc(sizeof(Address));
+  address->id = nextId++;
+  address->isConstant = 2;
+  address->src = (Coordinate){0, 0, 0};
+  address->type = newType(T_INT);
+  return address;
+}
 Address *newTempAddress(Type *type)
 {
   Address *address = (Address *)malloc(sizeof(Address));
@@ -109,6 +120,13 @@ Address *newTempAddress(Type *type)
 
 char *addressString(Address *address)
 {
+  if (address->isConstant == 2)
+  {
+    // it is a label
+    char *str = (char *)malloc(sizeof(char) * 10);
+    sprintf(str, "L%d", address->id);
+    return str;
+  }
   if (address->isConstant)
   {
     char *str = (char *)malloc(sizeof(char) * 10);
@@ -129,7 +147,14 @@ char *addressString(Address *address)
   else
   {
     char *str = (char *)malloc(sizeof(char) * 10);
-    sprintf(str, "t%d", address->id);
+    if (address->type->op != T_FUNCTION)
+    {
+      sprintf(str, "t%d", address->id);
+    }
+    else
+    {
+      sprintf(str, "f%d", address->id);
+    }
     return str;
   }
 }
@@ -157,10 +182,10 @@ static char *instTypeToString(InstType type)
     return "OP_MINUS";
   case OP_GOTO:
     return "OP_GOTO";
-  case OP_IF:
-    return "OP_IF";
-  case OP_IF_FALSE:
-    return "OP_IF_FALSE";
+  case OP_IF_GOTO:
+    return "OP_IF_GOTO";
+  case OP_IF_FALSE_GOTO:
+    return "OP_IF_FALSE_GOTO";
   case OP_PARAM:
     return "OP_PARAM";
   case OP_CALL:
@@ -177,9 +202,12 @@ static char *instTypeToString(InstType type)
     return "OP_ARRAY_DECL";
   case OP_ARRAY_INDEX:
     return "OP_ARRAY_INDEX";
+  case OP_ARRAY_ASSIGN:
+    return "OP_ARRAY_ASSIGN";
   default:
-    char *s = malloc(sizeof(char));
-    *s = type;
+    char *s = malloc(sizeof(char) * 2);
+    s[0] = type;
+    s[1] = 0;
     return s;
   }
 }

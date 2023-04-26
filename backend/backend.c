@@ -6,9 +6,10 @@
 
 void backend(Node *astRootNode, char *sourceFileName)
 {
-  printf("Generating IR...\n");
   printNode(astRootNode);
-  // return;
+  printf("\nDone print\n");
+  printf("Generating IR...\n");
   IR *ir = generateIR(astRootNode, sourceFileName);
+  printf("Writing IR...\n");
   writeIRtoFile(ir);
 }

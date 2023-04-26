@@ -88,7 +88,7 @@ nonzero [1-9]
 {nonzero}({digit})*"."({digit})* {yylval.fValue = atof(yytext); return FLOAT;}
 
   /* Characters */
-"\'"({alpha}|{digit})"\'" {yylval.cValue = yytext[0]; return CHARACTER;}
+"\'"({alpha}|{digit})"\'" {yylval.cValue = yytext[1]; return CHARACTER;}
 
   /* Comments*/
   /* "//"[^\n]*\n { lineno++; } */

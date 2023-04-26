@@ -1,4 +1,5 @@
 #include "map.h"
+#include "AST.h"
 #include "symbol.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,12 +12,12 @@ void initSymbolTable()
 {
   globals = malloc(sizeof(SymbolTable));
   globals->map = hashmap_create();
-  globals->level = S_GLOBAL;
+  globals->level = S_GLOBAL - 1;
   globals->enclosing = NULL;
   identifiers = malloc(sizeof(SymbolTable));
   identifiers->map = hashmap_create();
   identifiers->level = S_GLOBAL;
-  identifiers->enclosing = NULL;
+  identifiers->enclosing = globals;
 }
 SymbolTable *newTable(SymbolTable *table, int level)
 {
@@ -83,6 +84,21 @@ void beginScope()
 {
   level++;
 }
+void freeSymbolsAtLevel(int level)
+{
+  Symbol *all = identifiers->all;
+  Symbol *next = all;
+  while (all && all->scope >= level)
+  {
+    printf("freeing symbol %s\n", all->name);
+    next = all->up;
+    free(all->name);
+    if (all->type)
+      free(all->type);
+    free(all);
+    all = next;
+  }
+}
 void endScope()
 {
   if (identifiers->level == level)
@@ -98,4 +114,37 @@ Type *newType(TypeEnum typeEnum)
   memset(type, 0, sizeof(Type));
   type->op = typeEnum;
   return type;
+}
+int getHostSize(TypeEnum type)
+{
+  switch (type)
+  {
+  case T_INT:
+    return (int)(sizeof(int));
+  case T_FLOAT:
+    return (int)(sizeof(double));
+  case T_CHAR:
+    return (int)(sizeof(char));
+  default:
+    printf("invalid type for host size\n");
+    exit(1);
+  }
+}
+TypeEnum getArrayBaseType(Type *type)
+{
+  while (type->type != NULL)
+  {
+    type = type->type;
+  }
+  return type->op;
+}
+int getArraySize(Type *type)
+{
+  int size = 1;
+  while (type->type != NULL)
+  {
+    size *= type->size;
+    type = type->type;
+  }
+  return size;
 }

@@ -176,19 +176,36 @@ void freeNode(Node *node)
   switch (node->type)
   {
   case NODE_LITERAL:
-    free(node->as.value->as.data);
+    if (node->as.value->type == T_ARRAY)
+    {
+      free(node->as.value->as.data);
+    }
     free(node->as.value);
-    break;
+    free(node);
+    return;
   case NODE_SYMBOL:
-    free(node->as.symbol);
-    break;
+    free(node);
+    return;
   case NODE_OPR:
     for (int i = 0; i < node->as.opr.nops; i++)
     {
       freeNode(node->as.opr.operands[i]);
     }
-    free(node->as.opr.operands);
+    free(node);
+  default:
     break;
+  }
+}
+void freeFunctionAST(Node *node)
+{
+  if (node->type == NODE_OPR && node->as.opr.type == OPR_FUNC)
+  {
+    // free the param list
+    freeNode(node->as.opr.operands[1]);
+    printf("Freed param list for function\n");
+    // free the body
+    freeNode(node->as.opr.operands[2]);
+    printf("Freed body for function\n");
   }
 }
 

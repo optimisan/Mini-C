@@ -26,8 +26,8 @@ typedef enum
 {
   OP_MINUS,
   OP_GOTO,
-  OP_IF,
-  OP_IF_FALSE,
+  OP_IF_GOTO,
+  OP_IF_FALSE_GOTO,
   OP_PARAM,
   OP_CALL,
   OP_RETURN,
@@ -38,6 +38,7 @@ typedef enum
   OP_ARRAY_DECL,
   // Syntax is OP_ARRAY_INDEX[address, index, result]
   OP_ARRAY_INDEX,
+  OP_ARRAY_ASSIGN,
   OP_NOP, //=11
   // math are ascii
 } InstType;
@@ -62,9 +63,10 @@ typedef struct
 } IR;
 
 Address *newValueAddress(TypeEnum type, void *value, Coordinate src);
-Address *newIntAddress(TypeEnum type, int value, Coordinate src);
-Address *newCharAddress(TypeEnum type, char value, Coordinate src);
-Address *newFloatAddress(TypeEnum type, float value, Coordinate src);
+Address *newLabelAddress();
+Address *newIntAddress(int value, Coordinate src);
+Address *newCharAddress(char value, Coordinate src);
+Address *newFloatAddress(float value, Coordinate src);
 Address *symbolAddress(Symbol *symbol, IR *ir);
 Address *functionAddress(Symbol *symbol, IR *ir);
 Address *newTempAddress(Type *type);

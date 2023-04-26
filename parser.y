@@ -77,7 +77,7 @@ int yylex();
 %left '[' ']'
 %nonassoc ARR
 
-%type <node> expr arrayExpr callExpr arg_list continueStmt breakStmt returnStmt varInitialiser varNames arraySpecifier varDeclaration arrayInitialiser array_init_list param_list functionDecl declarations declaration funcBody stmtOrDecl stmt assignExpr switchStmt switchBody switches cases caseLabel caseType whileStmt blockStmt ifStmt forStmt forInit forCond forIter
+%type <node> expr arrayExpr callExpr arg_list continueStmt breakStmt returnStmt varInitialiser varNames arraySpecifier varDeclaration arrayInitialiser array_init_list param_list functionDecl declarations declaration funcBody stmtOrDecl stmt assignExpr switchStmt switchBody switchList caseLabel whileStmt blockStmt ifStmt forStmt forInit forCond forIter
 %type <iValue> varType
 /* %t declarations declaration functionDecl param_list varInitialiser varDeclaration varType varNames arraySpecifier funcBody stmtOrDecl stmt assignExpr switchStmt switchBody switches cases caseLabel caseType whileStmt blockStmt ifStmt expr arrayExpr callExpr returnStmt continueStmt breakStmt arg_list */
 
@@ -138,7 +138,8 @@ functionDecl: varType IDENTIFIER '(' param_list ')'
                                     param = param->as.opr.operands[0];
                                 else param = NULL;
                             }
-                            printf("func proto %d\n", funcType->proto[0]->op);
+                            // if(funcType->proto)
+                            printf("func proto %d\n",1/* ,  funcType->proto[0]->op */);
                             beginScope();
                         }
             funcBody
@@ -150,11 +151,10 @@ functionDecl: varType IDENTIFIER '(' param_list ')'
                     currentFunctionType = NULL;
                 }
                 ;
-
-param_list: varType IDENTIFIER {
+funcArraySpecifier: '['']' | ;
+param_list: varType IDENTIFIER funcArraySpecifier {
                         Symbol* psym = install($2.name, &identifiers, level, $2.src);
                         $$ = oprNode(OPR_LIST, 1, identifierNode(psym)); 
-                        printf("Found param %s\n", $2.name);
                         Type* paramType = malloc(sizeof(Type));
                         paramType->op = $1;
                         paramType->type=NULL;
@@ -162,8 +162,7 @@ param_list: varType IDENTIFIER {
                         psym->type = paramType;
                         param_list_node = $$;
                     }
-    | param_list ',' varType IDENTIFIER {
-                        printf("Found param %s\n", $4.name);
+    | param_list ',' varType IDENTIFIER funcArraySpecifier {
                         Symbol* psym = install($4.name, &identifiers, level, $4.src);
                         if(psym->type){
                             compileError($4.src, strlen($4.name), "Parameter %s already declared", $4.name);
@@ -191,9 +190,9 @@ varInitialiser: IDENTIFIER arraySpecifier {
 
 arrayInitialiser: '{' array_init_list '}' { $$ = $2; $$->exprType.op = T_ARRAY;}
 
-array_init_list: expr { $$ = oprNode(OPR_LIST, 1, $1);}
+array_init_list: expr { /* $$ = oprNode(OPR_LIST, 1, $1); */}
     | array_init_list ',' expr { $$ = oprNode(OPR_LIST, 3, $1, $3, NULL); }
-    | arrayInitialiser { $$ = oprNode(OPR_LIST, 1, $1); $$->exprType.op = T_ARRAY;}
+    | arrayInitialiser { /* $$ = oprNode(OPR_LIST, 1, $1); */$$ = $1; $$->exprType.op = T_ARRAY;}
     | array_init_list ',' arrayInitialiser { $$ = oprNode(OPR_LIST, 3, $1, $3, NULL); $$->exprType.op = T_ARRAY;}
     ;
 
@@ -305,9 +304,9 @@ stmtOrDecl: stmtOrDecl stmt {$$ = oprNode(OPR_LIST, 2, $1, $2); funcBodyNode = $
     ;
 
 
-stmtList: stmtList stmt
-    |
-    ;
+/* stmtList: stmtList stmt */
+    /* |
+    ; */
 
 stmt: ';' {$$ = NULL;}
     | blockStmt
@@ -326,7 +325,7 @@ stmt: ';' {$$ = NULL;}
 
 forStmt: FOR '(' {beginScope();} forInit ';' forCond ';' forIter ')' stmt {
     endScope();
-
+    $$ = oprNode(OPR_FOR, 4, $4, $6, $8, $10);
 }
 
 forInit: assignExpr
@@ -390,17 +389,23 @@ switchStmt:
                                     ANSI_COLOR_BOLD ANSI_COLOR_BLUE 
                                     "Warning: " ANSI_COLOR_RESET "Switch statement is not implemented");
                     }
-    '(' expr ')' switchBody { $$ = NULL; }
+    '(' expr ')' {beginScope();} '{' switchBody '}' { printf("switch end\n"); $$ = NULL; endScope();}
+switchBody: switchList | {$$ = NULL;};
+switchList: stmt
+    | varDeclaration
+    | caseLabel
+    | switchList caseLabel
+    | switchList stmt
+    | switchList varDeclaration
+    ;
 
-switchBody: '{' switches '}'
-
-switches: cases 
+/* switches: cases 
     |
-    ;
+    ; */
 
-cases:caseLabel stmtList
+/* cases: caseLabel stmtList
     | cases caseLabel stmtList
-    ;
+    ; */
 
 caseLabel: caseType {templineno = lineno; tempcol = col- 4;} expr ':' {
                 if($3->type!= NODE_LITERAL){
@@ -411,28 +416,27 @@ caseLabel: caseType {templineno = lineno; tempcol = col- 4;} expr ':' {
                 }
 } ;
 
-caseType: CASE | DEFAULT ;
+caseType: CASE | DEFAULT;
 
 whileStmt: WHILE '(' expr ')' stmt {$$ = oprNode(OPR_WHILE, 2, $3, $5);}
 
 blockStmt: '{'          {beginScope();}
             stmtOrDecl 
            '}'
-                        {endScope(); $$ = $<node>2;}
+                        {endScope(); $$ = $3;}
             ;
 
-ifStmt: IF '(' expr ')' stmt %prec IFX {printf("Unmatched if statement\n");}
-    | IF '(' expr ')' stmt ELSE stmt {printf("Matched if statement\n");}
+ifStmt: IF '(' expr ')' stmt %prec IFX { $$ = oprNode(OPR_IF, 2, $3, $5);}
+    | IF '(' expr ')' stmt ELSE stmt { $$ = oprNode(OPR_IF, 3, $3, $5, $7);}
 
 expr: INTEGER {$$ = intNode($1);}
     | CHARACTER {$$ = charNode($1); }
     | IDENTIFIER { 
             Symbol* foundId = getSymbol($1.name, identifiers, $1.src, "Identifier '%s' not declared in this scope", $1.name);
             $$ = identifierNode(foundId);
-            printf("Idenfitier base type is %d\n", $$->exprType.ndim);
         }
     | FLOAT {$$ = floatNode($1);}
-    | STRING {$$ = strNode($1, strlen($1)); printf("String here, %d\n", $$->src.length);}
+    | STRING {$$ = strNode($1, strlen($1));}
     | callExpr {$$ = $1;}
     | '-' expr %prec UMINUS { $$ = oprNode('-', 1, $2); typeCheckUnary($2); $$->exprType.op = $2->exprType.op;}
     | '!' expr %prec UMINUS { $$ = oprNode('!', 1, $2); typeCheckUnary($2); $$->exprType.op = $2->exprType.op;}
@@ -447,8 +451,8 @@ expr: INTEGER {$$ = intNode($1);}
     | expr LE expr { $$ = oprNode(OPR_LE, 2, $1, $3);   $$->exprType.op = typeWiden($1->exprType.op, $3->exprType.op);}
     | expr EQ expr { $$ = oprNode(OPR_EQ, 2, $1, $3);   $$->exprType.op = typeWiden($1->exprType.op, $3->exprType.op);}
     | expr NE expr { $$ = oprNode(OPR_NE, 2, $1, $3);   $$->exprType.op = typeWiden($1->exprType.op, $3->exprType.op);}
-    | expr AND expr { $$ = oprNode(OPR_AND, 2, $1, $3); $$->exprType.op = typeWiden($1->exprType.op, $3->exprType.op);}
-    | expr OR expr { $$ = oprNode(OPR_OR, 2, $1, $3);   $$->exprType.op = typeWiden($1->exprType.op, $3->exprType.op);}
+    | expr AND expr { $$ = oprNode(OPR_AND, 2, $1, $3); $$->exprType.op = T_INT;if($1->exprType.op != T_INT || $3->exprType.op != T_INT){compileError($1->src, $1->src.length + $3->src.length, "Boolean operators only work on integers");}}
+    | expr OR expr { $$ = oprNode(OPR_OR, 2, $1, $3);   $$->exprType.op = T_INT;if($1->exprType.op != T_INT || $3->exprType.op != T_INT){compileError($1->src, $1->src.length + $3->src.length, "Boolean operators only work on integers");}}
     | '(' expr ')' { $$ = $2;   $$->exprType.op = $2->exprType.op;}
     | arrayExpr {$$ = $1;       $$->exprType.op = $1->exprType.op;}
     /* | expr '[' expr ']' %prec ARR{printf("Found array expression\n");} */
@@ -486,20 +490,21 @@ callExpr: IDENTIFIER '(' arg_list ')' {
                 printf("Starting with %d params\n", i);
                 if(param){
                     printf("here\n");
-                    while(param->as.opr.nops==2 && i >= 0){
-                        printf("Comparing with original type %d\n", callee->type->proto[i]->op);
+                    while(param->as.opr.type==OPR_LIST && i >= 0){
+                        printf("Comparing with original type= %d\n", callee->type->proto[i]->op);
                         if(!typeCheckAssign(callee->type->proto[i]->op, param->as.opr.operands[1]->exprType.op)){
                             compileError(param->as.opr.operands[1]->src, param->as.opr.operands[1]->src.length, "Type mismatch in function call to '%s'", $1.name);
                         }
                         param = param->as.opr.operands[0];
                         i--;
                     }
-                    printf("inside %d\n", callee->type->proto[i] == NULL);
+                    if(i>=0){
                     printf("Comparing with original type %d \n", /* param->exprType.op, */ callee->type->proto[i]->op);
-                    if(i<0) {
+                    printf("inside %d\n", callee->type->proto[i] == NULL);}
+                    if(i<0 && !callee->type->variadicFunc) {
                             compileError($1.src, strlen($1.name), "Too many parameters in function call to '%s'", $1.name);
                     }
-                    if(!typeCheckAssign(callee->type->proto[i]->op, param->exprType.op)){
+                    if(!callee->type->variadicFunc && !typeCheckAssign(callee->type->proto[i]->op, param->exprType.op)){
                         compileError($1.src, strlen($1.name), "Type mismatch in function call to '%s'", $1.name);
                     }
                     i--;
@@ -540,11 +545,13 @@ breakStmt: BREAK {$$ = oprNode(OPR_BREAK, 0);}
 %%
 void typeCheckArrayInitialiser(Type* elementType, Node* expr){
     Node* exprList = expr;
-    /* printf("Starting array %d\n", elementType->type->op, exprList); */
+    /* printf("Starting array %d\n", elementType->type->op, exprList);
+    printNode(exprList);
+    printf("\n\n======\n"); */
     if(exprList == NULL) return;
     //if it is not a list, this is the last element
-    if(exprList->as.opr.nops == 1){
-        Node* insideElement = exprList->as.opr.operands[0];
+    if(exprList->type != NODE_OPR && exprList->as.opr.type != OPR_LIST){
+        Node* insideElement = exprList;//->as.opr.operands[0];
         printf("Checking 1) %d %d\n", elementType->type->op, insideElement->exprType.op);
         if(!typeCheckAssign(elementType->type->op, insideElement->exprType.op)){
             compileError( insideElement->src,  insideElement->src.length, "Invalid array element type");
@@ -605,7 +612,9 @@ int typeCheckAssign(TypeEnum varType, TypeEnum exprType){
     if(varType == T_ARRAY && exprType != T_ARRAY){
         return 0;
     }
-
+    if(varType == T_FUNCTION && exprType != T_FUNCTION){
+        return 0;
+    }
     if(exprType == T_FLOAT && varType != T_FLOAT){
         return 0;
     }

@@ -51,6 +51,7 @@ typedef struct Type
   TypeEnum op;
   int size;
   int ndim;
+  short int variadicFunc;
   struct Symbol *sym;
   int lineno;
   // Function prototype
@@ -83,6 +84,9 @@ Type *newType(TypeEnum typeEnum);
 
 void initSymbolTable();
 
+int getHostSize(TypeEnum type);
+TypeEnum getArrayBaseType(Type *type);
+int getArraySize(Type *type);
 SymbolTable *newTable(SymbolTable *table, int level);
 Symbol *install(char *name, SymbolTable **table, int level, Coordinate src);
 Symbol *lookup(char *name, SymbolTable *table);
