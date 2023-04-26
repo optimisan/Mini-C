@@ -17,6 +17,5 @@ void runVM()
   while (!IS_AT_END())
   {
     Instruction instruction = READ_INSTRUCTION();
-    printf("Found");
   }
 }

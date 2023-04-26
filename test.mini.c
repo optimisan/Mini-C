@@ -70,6 +70,8 @@ void test(void *a)
 {
   printf("got as %d\n", *(int *)a);
 }
+#define TO_UINTPTR(x) (*(uintptr_t *)(&x))
+#define FROM_UINTPTR(x, type) (*(type *)(&x))
 int main()
 {
   // point_at_in_line(3, 5, 600);
@@ -80,6 +82,12 @@ int main()
   // st *b;
   // hashmap_get(m, "a", 1, (uintptr_t *)&b);
   // printf("%d", b->a);
-  int a = 4;
-  test(&a);
+  int a = 10;
+  float b = 4.56;
+  char *str = "asd";
+  int temp[] = {12, 2, 3, 4};
+  int *arr = malloc(sizeof(int) * 4);
+  memcpy(arr, temp, sizeof(int) * 4);
+  uintptr_t p = TO_UINTPTR(arr);
+  printf("%d", FROM_UINTPTR(p, int *)[0]);
 }
