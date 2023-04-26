@@ -122,7 +122,7 @@ int getHostSize(TypeEnum type)
   case T_INT:
     return (int)(sizeof(int));
   case T_FLOAT:
-    return (int)(sizeof(double));
+    return (int)(sizeof(float));
   case T_CHAR:
     return (int)(sizeof(char));
   default:

@@ -95,6 +95,7 @@ Address *symbolAddress(Symbol *symbol, IR *ir)
   hashmap_get_set(ir->map, symbol, sizeof(Symbol *), &id);
   address->id = id;
   address->isConstant = 0;
+  address->sym = symbol;
   address->src = symbol->src;
   address->type = symbol->type;
   return address;

@@ -230,21 +230,25 @@ varDeclaration: varType varNames {
         //check if this is an array
         if(varInitialiser->as.opr.operands[1] != NULL){
             Node* arraySpecifier = varInitialiser->as.opr.operands[1];
-            Type* innerType = type;
+            Type* outerType = type;
             do {
                 arrLastSize = arraySpecifier->as.opr.operands[1]->as.value->as.integer;
                 //check if size is declared for dimensions other than first
                 if(arrLastSize <= 0 && arraySpecifier->as.opr.operands[0] != NULL){
                     compileError(src, strlen(varSymbol->name), "Array dimensions except the first cannot be empty %d", arrLastSize);
                 }
-                Type* outerType = malloc(sizeof(Type));
+                Type* innerType = malloc(sizeof(Type));
                 outerType->sym = installed;
                 outerType->op = T_ARRAY;
-                outerType->type = innerType;
                 outerType->size = arrLastSize;
-                innerType = outerType;
+                outerType->type = innerType;
+                outerType = innerType;
             } while((arraySpecifier = arraySpecifier->as.opr.operands[0]));
-            installed->type=innerType;
+            outerType->sym = installed;
+            outerType->op = $1;
+            outerType->size = arrLastSize;
+            // installed->type=outerType;
+            printf("Innermost type is %d\n", installed->type->op);
         }
 
         // printf("\nType op of this var is %d\n", installed->type->op);
@@ -254,7 +258,7 @@ varDeclaration: varType varNames {
             Node* expr = varInitialiser->as.opr.operands[2];
             // printf("Found initialiser %d\n", expr->exprType);
             if(!typeCheckAssign(installed->type->op, expr->exprType.op)){
-                compileError(src, strlen(varSymbol->name), "Type mismatch in variable initialisation %s", varSymbol->name);
+                compileError(src, strlen(varSymbol->name), "Type mismatch in variable initialisation of '%s'", varSymbol->name);
             }
             //Check if string initialiser
             if(expr->type == NODE_LITERAL && expr->as.value->type == T_ARRAY){
@@ -545,16 +549,17 @@ breakStmt: BREAK {$$ = oprNode(OPR_BREAK, 0);}
 %%
 void typeCheckArrayInitialiser(Type* elementType, Node* expr){
     Node* exprList = expr;
-    /* printf("Starting array %d\n", elementType->type->op, exprList);
+    TypeEnum baseType = getArrayBaseType(elementType);
+    printf("Starting array %d\n", elementType->type->op, exprList);
     printNode(exprList);
-    printf("\n\n======\n"); */
+    printf("\n\n======\n");
     if(exprList == NULL) return;
     //if it is not a list, this is the last element
     if(exprList->type != NODE_OPR && exprList->as.opr.type != OPR_LIST){
         Node* insideElement = exprList;//->as.opr.operands[0];
         printf("Checking 1) %d %d\n", elementType->type->op, insideElement->exprType.op);
-        if(!typeCheckAssign(elementType->type->op, insideElement->exprType.op)){
-            compileError( insideElement->src,  insideElement->src.length, "Invalid array element type");
+        if(!typeCheckAssign(elementType->type->op, insideElement->exprType.op) && !typeCheckAssign(baseType, insideElement->exprType.op)){
+            compileError( insideElement->src,  insideElement->src.length, "Invalid array element type %d %d", elementType->type->op, insideElement->exprType.op);
         }
         if(insideElement->as.opr.type == OPR_LIST){
             typeCheckArrayInitialiser(elementType->type, insideElement);
@@ -564,11 +569,13 @@ void typeCheckArrayInitialiser(Type* elementType, Node* expr){
         //if it is a list, it will be checked recursively
         /* printf("Checking %d %d\n", elementType->type->op, exprList->as.opr.operands[1]->exprType.op); */
         Node* localElement = exprList->as.opr.operands[1];
-        if(localElement->exprType.op != elementType->type->op){
-            compileError(localElement->src, localElement->src.length, "Invalid array element type 2");
-        }
         if(localElement->as.opr.type == OPR_LIST){
             typeCheckArrayInitialiser(elementType->type, exprList->as.opr.operands[1]);
+        }
+        TypeEnum baseType = getArrayBaseType(elementType);
+        printf("Checking 2) %d %d\n", baseType, localElement->exprType.op);
+        if(localElement->exprType.op != baseType && localElement->exprType.op != elementType->type->op){
+            compileError(localElement->src, localElement->src.length, "Invalid array element type 2");
         }
         //advance to next element in list
         typeCheckArrayInitialiser(elementType, exprList->as.opr.operands[0]);

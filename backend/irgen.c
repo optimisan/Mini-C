@@ -28,6 +28,7 @@ static Address *irFuncCall(Node *node);
 static Address *irIf(Node *node);
 static Address *irWhile(Node *node);
 static Address *irFor(Node *node);
+static Address *irArrayExpr(Node *node);
 
 static Address *irNode(Node *node)
 {
@@ -65,50 +66,8 @@ static Address *irNode(Node *node)
     case OPR_FOR:
       irFor(node);
       break;
-    // case OPR_RETURN:
-    //   irReturn(node);
-    //   break;
-    // case OPR_PRINT:
-    //   irPrint(node);
-    //   break;
-    // case OPR_READ:
-    //   irRead(node);
-    //   break;
-    // case OPR_FUNC:
-    //   irFunc(node);
-    //   break;
-    // case OPR_ARG:
-    //   irArg(node);
-    //   break;
-    // case OPR_CALL:
-    //   irCall(node);
-    //   break;
-    // case OPR_CAST:
-    //   irCast(node);
-    //   break;
-    // case OPR_NEG:
-    //   irNeg(node);
-    //   break;
-    // case OPR_POS:
-    //   irPos(node);
-    //   break;
-    // case OPR_INDEX:
-    //   irIndex(node);
-    //   break;
-    // case OPR_DEREF:
-    //   irDeref(node);
-    //   break;
-    // case OPR_ADDR:
-    //   irAddr(node);
-    //   break;
-    // case OPR_SIZEOF:
-    //   irSizeof(node);
-    //   break;
-    // case OPR_CAST_INT:
-    // case OPR_CAST_FLOAT:
-    // case OPR_CAST_CHAR:
-    //   irCast(node);
-    //   break;
+    case '[':
+      return irArrayExpr(node);
     case OPR_LT:
     case OPR_LE:
     case OPR_GT:
@@ -206,10 +165,72 @@ static Address *irFuncCall(Node *node)
   Symbol *sym = node->as.opr.operands[0]->as.symbol;
   // int nparams1 = sym->type->size;
   Address *temp = newTempAddress(sym->type->type);
-  addInstruction(ir, newInstruction(OP_CALL, symbolAddress(sym, ir), newIntAddress(nparams, node->src), temp));
+  Address *symAddr = symbolAddress(sym, ir);
+  addInstruction(ir, newInstruction(OP_CALL, symAddr, newIntAddress(nparams, node->src), temp));
   return temp;
 }
-
+typedef struct
+{
+  Address *offset;
+  int size;
+} ArrayInfo;
+static ArrayInfo getArrayIndexOffset(Node *arrIndex, Type *type)
+{
+  Node *firstElement = arrIndex->as.opr.operands[0];
+  if (firstElement->type == NODE_SYMBOL)
+  {
+    return (ArrayInfo){irNode(arrIndex->as.opr.operands[1]), 1};
+  }
+  if (arrIndex->type != NODE_OPR || arrIndex->as.opr.type != '[')
+  {
+    printf("Error: Expected array index\n");
+    exit(1);
+  }
+  else
+  {
+    printf("Outer type size if %d and inner is %d\n", type->size, type->type->size);
+    // second element is the index at this level
+    Address *currentOffset = irNode(arrIndex->as.opr.operands[1]);                       // 24
+    ArrayInfo innerInfo = getArrayIndexOffset(arrIndex->as.opr.operands[0], type->type); // 12, 1
+    Address *temp = newTempAddress(newType(T_INT));
+    addInstruction(ir, newInstruction('*', newIntAddress(type->size, arrIndex->src), innerInfo.offset, temp));
+    addInstruction(ir, newInstruction('+', temp, currentOffset, temp));
+    return (ArrayInfo){temp, innerInfo.size * type->size};
+  }
+}
+static Symbol *getArrayBase(Node *arrIndex)
+{
+  printf("Getting array base for type %d\n", arrIndex->as.opr.type == '[');
+  while (arrIndex->type == NODE_OPR && arrIndex->as.opr.type == '[')
+  {
+    arrIndex = arrIndex->as.opr.operands[0];
+  }
+  if (arrIndex->type == NODE_SYMBOL)
+  {
+    return arrIndex->as.symbol;
+  }
+  else
+  {
+    compileError(arrIndex->src, 1, "Only symbols are supported as arrays. Need a different architecture to support other types.");
+  }
+}
+static Address *indexArrayWithOpAs(Node *node, InstType opType, Address *result)
+{
+  Symbol *sym = getArrayBase(node);
+  ArrayInfo arrInfo = getArrayIndexOffset(node, sym->type);
+  Address *offset = arrInfo.offset;
+  Address *base = symbolAddress(sym, ir);
+  if (!result)
+  {
+    result = newTempAddress(sym->type);
+  }
+  addInstruction(ir, newInstruction(opType, base, offset, result));
+  return result;
+}
+static Address *irArrayExpr(Node *node)
+{
+  return indexArrayWithOpAs(node, OP_ARRAY_INDEX, NULL);
+}
 static Address *irExpr(Node *node)
 {
   if (node->as.opr.nops == 1)
@@ -364,8 +385,26 @@ static int max(int a, int b)
 {
   return a > b ? a : b;
 }
+static int addArrayDimensionSizes(IR *localIR, Type *type)
+{
+  int ndim = 0;
+  if (type->op == T_ARRAY)
+  {
+    addInstruction(localIR, newInstruction(OP_ASSIGN, newIntAddress(type->size, (Coordinate){0, 0}), NULL, NULL));
+    return addArrayDimensionSizes(localIR, type->type) + 1;
+  }
+  else
+  {
+    // addInstruction(localIR, newInstruction(OP_ASSIGN, newIntAddress(getHostSize(type->op), (Coordinate){0, 0}), NULL, NULL));
+    return 1;
+  }
+}
 static void arrayDeclaration(IR *localIR, Node *varInitialiser)
 {
+#define ADD_ARRAY_DIMS()                                                                                          \
+  addInstruction(localIR, newInstruction(OP_ASSIGN, newIntAddress(elementSize, (Coordinate){0, 0}), NULL, NULL)); \
+  ndim = addArrayDimensionSizes(localIR, type);
+
   Symbol *arrSymbol = varInitialiser->as.opr.operands[0]->as.symbol;
   Address *arrAddress = symbolAddress(arrSymbol, ir);
   Type *type = arrSymbol->type;
@@ -374,13 +413,13 @@ static void arrayDeclaration(IR *localIR, Node *varInitialiser)
   int arraySize = getArraySize(arrSymbol->type);
   printf("In array decl\n");
   Node *initExpr = varInitialiser->as.opr.operands[2];
+  int ndim = 0;
   if (initExpr && initExpr->type == NODE_OPR && initExpr->as.opr.type == OPR_LIST)
   {
     printf("In array init\n");
     int numberOfElementsInit = readArrayInitialiser(localIR, varInitialiser->as.opr.operands[2], arrAddress);
     if (arraySize == 0 && numberOfElementsInit == 0)
     {
-      // point_at_in_line(arrSymbol->src.line, arrSymbol->src.col, strlen(arrSymbol->name));
       compileError(varInitialiser->src, strlen(arrSymbol->name), "Array ('%s') size cannot be zero", arrSymbol->name);
     }
     else if (arraySize != 0 && arraySize < numberOfElementsInit)
@@ -388,6 +427,7 @@ static void arrayDeclaration(IR *localIR, Node *varInitialiser)
       compileError(varInitialiser->src, numberOfElementsInit * 2, "Excess elements in initializer for array '%s'", arrSymbol->name);
     }
     arraySize = max(arraySize, numberOfElementsInit);
+    // ADD_ARRAY_DIMS();
     addInstruction(localIR,
                    newInstruction(OP_ARRAY_DECL,
                                   newIntAddress(arraySize, (Coordinate){0, 0, 0}),
@@ -407,12 +447,15 @@ static void arrayDeclaration(IR *localIR, Node *varInitialiser)
   else
   {
     printf("in no init array\n");
+    int ndim = addArrayDimensionSizes(localIR, type);
+    // ADD_ARRAY_DIMS();
     addInstruction(localIR,
                    newInstruction(OP_ARRAY_DECL,
                                   newIntAddress(arraySize, (Coordinate){0, 0, 0}),
                                   newIntAddress(elementSize, (Coordinate){0, 0, 0}),
                                   arrAddress));
   }
+#undef ADD_ARRAY_DIMS
 }
 static Address *irVarDecl(Node *node)
 {
@@ -464,8 +507,13 @@ static Address *irVarDecl(Node *node)
 }
 static Address *irAssign(Node *node)
 {
-  Address *left = irNode(node->as.opr.operands[0]);
   Address *right = irNode(node->as.opr.operands[1]);
+  if (node->as.opr.operands[0]->type == NODE_OPR && node->as.opr.operands[0]->as.opr.type == '[')
+  {
+    // left is an array
+    return indexArrayWithOpAs(node->as.opr.operands[0], OP_ARRAY_ASSIGN, right);
+  }
+  Address *left = irNode(node->as.opr.operands[0]);
   // no need to check type, it's already checked in semantic analysis
   addInstruction(ir, newInstruction(OP_ASSIGN, right, NULL, left));
 }

@@ -1,6 +1,7 @@
 #include "backend.h"
 #include "irgen.h"
 #include "ir.h"
+#include "../vm/vm.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -12,4 +13,7 @@ void backend(Node *astRootNode, char *sourceFileName)
   IR *ir = generateIR(astRootNode, sourceFileName);
   printf("Writing IR...\n");
   writeIRtoFile(ir);
+  printf("Executing IR...\n");
+  initVM(ir);
+  runVM();
 }

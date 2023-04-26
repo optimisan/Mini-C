@@ -1,9 +1,6 @@
 // int h = 4 == 7 && 6;
-int main(int g)
+int main(int h)
 {
-  int a = 4;
-  for (g = 4;;)
-  {
-    g = "4.5";
-  }
+  char a[] = "Asd";
+  a[0] = 'a';
 }

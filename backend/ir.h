@@ -14,6 +14,7 @@ typedef struct
   short isConstant;
   Coordinate src;
   Type *type;
+  Symbol *sym;
   union
   {
     int integer;

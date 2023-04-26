@@ -1,1 +1,1 @@
-./parser test2.mini.c
+./parser testir.mini.c
