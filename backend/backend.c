@@ -7,6 +7,7 @@
 
 void backend(Node *astRootNode, char *sourceFileName)
 {
+  printf("==== Backend ====\n");
   printNode(astRootNode);
   printf("\nDone print\n");
   printf("Generating IR...\n");

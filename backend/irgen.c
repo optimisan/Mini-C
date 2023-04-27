@@ -9,6 +9,7 @@
 void compileError(Coordinate pos, int lexemeLength, char *format, ...);
 
 IR *ir;
+Address *currentFunction = NULL;
 
 static Address *irNode(Node *node);
 
@@ -68,6 +69,10 @@ static Address *irNode(Node *node)
       break;
     case '[':
       return irArrayExpr(node);
+    case OPR_RETURN:
+      addInstruction(ir, newInstruction(OP_RETURN, irNode(node->as.opr.operands[0]), NULL, NULL));
+      currentFunction = NULL;
+      break;
     case OPR_LT:
     case OPR_LE:
     case OPR_GT:
@@ -179,7 +184,7 @@ static ArrayInfo getArrayIndexOffset(Node *arrIndex, Type *type)
   Node *firstElement = arrIndex->as.opr.operands[0];
   if (firstElement->type == NODE_SYMBOL)
   {
-    return (ArrayInfo){irNode(arrIndex->as.opr.operands[1]), getHostSize(type->type->op)};
+    return (ArrayInfo){irNode(arrIndex->as.opr.operands[1]), 1 /* , getHostSize(type->type->op) */};
   }
   if (arrIndex->type != NODE_OPR || arrIndex->as.opr.type != '[')
   {
@@ -224,7 +229,7 @@ static Address *indexArrayWithOpAs(Node *node, InstType opType, Address *result)
   {
     result = newTempAddress(sym->type);
   }
-  addInstruction(ir, newInstruction('*', newIntAddress(getHostSize(getArrayBaseType(sym->type)), node->src), offset, offset));
+  // addInstruction(ir, newInstruction('*', newIntAddress(getHostSize(getArrayBaseType(sym->type)), node->src), offset, offset));
   addInstruction(ir, newInstruction(opType, base, offset, result));
   return result;
 }
@@ -236,7 +241,7 @@ static Address *irExpr(Node *node)
 {
   if (node->as.opr.nops == 1)
   {
-    Address *temp = newTempAddress(NULL);
+    Address *temp = newTempAddress(newType(node->exprType.op));
     int type = node->as.opr.type;
     if (type == '-')
     {
@@ -265,7 +270,7 @@ static Address *stringAddress(Value *value, Coordinate src)
   type->size = value->size + 1;
   type->type = elementType;
   Address *temp = newTempAddress(type);
-  printf("Adding string address for %s\n", (char *)(value->as.data));
+  printf("Adding string address for %s, size=%d\n", (char *)(value->as.data), type->size);
   int eleSize = getHostSize(T_CHAR);
   addInstruction(ir, newInstruction(OP_ARRAY_DECL, newIntAddress(value->size + 1, src), newIntAddress(eleSize, src), temp));
   for (int i = 0; i < value->size; i++)
@@ -302,6 +307,7 @@ static Address *irFunctionDecl(Node *node)
 {
   Node *funcSymNode = node->as.opr.operands[0];
   Address *funcAddr = functionAddress(funcSymNode->as.symbol, ir);
+  currentFunction = funcAddr;
   addInstruction(ir, newInstruction(OP_FUNC, newIntAddress(funcSymNode->as.symbol->type->size, funcSymNode->src), NULL, funcAddr));
 
   Node *params = node->as.opr.operands[1];
@@ -340,6 +346,11 @@ static Address *irFunctionDecl(Node *node)
   beginFunction();
   irNode(funcBody);
   freeFunctionAST(node);
+  if (currentFunction)
+  {
+    compileError(funcSymNode->as.symbol->src, strlen(currentFunction->sym->name), "Function %s has no return statement", currentFunction->sym->name);
+  }
+  addInstruction(ir, newInstruction(OP_FUNC_END, NULL, NULL, NULL));
   endFunction();
 }
 static Address *irSymbol(Node *node)
@@ -348,20 +359,21 @@ static Address *irSymbol(Node *node)
 }
 static int readArrayInitialiser(IR *localIR, Node *arrList, Address *arrAddress, int elementSize)
 {
-#define ADD_ELEMENT()                                                                                \
-  if (arrElement->type == NODE_OPR && arrElement->as.opr.type == OPR_LIST)                           \
-  {                                                                                                  \
-    numberOfElementsInit += readArrayInitialiser(localIR, arrElement, arrAddress, elementSize);      \
-  }                                                                                                  \
-  else                                                                                               \
-  {                                                                                                  \
-    Address *initExprAddr = irNode(arrElement);                                                      \
-    addInstruction(localIR,                                                                          \
-                   newInstruction(OP_ARRAY_ASSIGN,                                                   \
-                                  arrAddress,                                                        \
-                                  newIntAddress(numberOfElementsInit *elementSize, arrElement->src), \
-                                  initExprAddr));                                                    \
-    numberOfElementsInit++;                                                                          \
+#define ADD_ELEMENT()                                                                           \
+  if (arrElement->type == NODE_OPR && arrElement->as.opr.type == OPR_LIST)                      \
+  {                                                                                             \
+    numberOfElementsInit += readArrayInitialiser(localIR, arrElement, arrAddress, elementSize); \
+  }                                                                                             \
+  else                                                                                          \
+  {                                                                                             \
+    Address *initExprAddr = irNode(arrElement);                                                 \
+    addInstruction(localIR,                                                                     \
+                   newInstruction(OP_ARRAY_ASSIGN,                                              \
+                                  arrAddress,                                                   \
+                                  newIntAddress(numberOfElementsInit,                           \
+                                                /*  *elementSize, */ arrElement->src),          \
+                                  initExprAddr));                                               \
+    numberOfElementsInit++;                                                                     \
   }
 
   int numberOfElementsInit = 0;
@@ -386,12 +398,22 @@ static int max(int a, int b)
 {
   return a > b ? a : b;
 }
+static int getArrayNumberOfDimensions(Type *type)
+{
+  int ndim = 0;
+  while (type->op == T_ARRAY)
+  {
+    ndim++;
+    type = type->type;
+  }
+  return ndim;
+}
 static int addArrayDimensionSizes(IR *localIR, Type *type)
 {
   int ndim = 0;
   if (type->op == T_ARRAY)
   {
-    addInstruction(localIR, newInstruction(OP_ASSIGN, newIntAddress(type->size, (Coordinate){0, 0}), NULL, NULL));
+    // addInstruction(localIR, newInstruction(OP_ASSIGN, newIntAddress(type->size, (Coordinate){0, 0}), NULL, NULL));
     return addArrayDimensionSizes(localIR, type->type) + 1;
   }
   else
@@ -399,6 +421,15 @@ static int addArrayDimensionSizes(IR *localIR, Type *type)
     // addInstruction(localIR, newInstruction(OP_ASSIGN, newIntAddress(getHostSize(type->op), (Coordinate){0, 0}), NULL, NULL));
     return 1;
   }
+}
+static int arrayIsDynamic(Type *type)
+{
+  // if the array is dynamic, it will have a dimension size of 0
+  while (type->type)
+  {
+    type = type->type;
+  }
+  return type->size == 0;
 }
 static void arrayDeclaration(IR *localIR, Node *varInitialiser)
 {
@@ -417,43 +448,61 @@ static void arrayDeclaration(IR *localIR, Node *varInitialiser)
   int ndim = 0;
   if (initExpr && initExpr->type == NODE_OPR && initExpr->as.opr.type == OPR_LIST)
   {
-    printf("In array init\n");
     int numberOfElementsInit = readArrayInitialiser(localIR, varInitialiser->as.opr.operands[2], arrAddress, elementSize);
     if (arraySize == 0 && numberOfElementsInit == 0)
     {
       compileError(varInitialiser->src, strlen(arrSymbol->name), "Array ('%s') size cannot be zero", arrSymbol->name);
     }
-    else if (arraySize != 0 && arraySize < numberOfElementsInit)
+    else if (arraySize != 0 && arraySize < numberOfElementsInit && !arrayIsDynamic(type))
     {
       compileError(varInitialiser->src, numberOfElementsInit * 2, "Excess elements in initializer for array '%s'", arrSymbol->name);
     }
     arraySize = max(arraySize, numberOfElementsInit);
+    arrAddress->type = type;
+    printf("\t\t\t\tIn array init %d\n", symbolAddress(arrSymbol, ir)->type->size);
+
     // ADD_ARRAY_DIMS();
     addInstruction(localIR,
                    newInstruction(OP_ARRAY_DECL,
-                                  newIntAddress(arraySize, (Coordinate){0, 0, 0}),
-                                  newIntAddress(elementSize, (Coordinate){0, 0, 0}),
+                                  newIntAddress0(arraySize),
+                                  newIntAddress0(elementSize),
                                   arrAddress));
   }
   else if (initExpr)
   {
-    printf("in array assign\n");
     Address *initExprAddr = irNode(initExpr);
+    symbolAddress(arrSymbol, ir)->type = initExprAddr->type;
+    printf("in array assign with size as %d\n", symbolAddress(arrSymbol, ir)->type->size);
+    if (initExpr->type == NODE_LITERAL && initExpr->as.value->type == T_ARRAY)
+    {
+      addInstruction(localIR, newInstruction(OP_ASSIGN, initExprAddr, NULL, arrAddress));
+      // addInstruction(localIR, newInstruction(OP_ARRAY_DECL, newIntAddress0(initExprAddr->type->size), newIntAddress0(elementSize), arrAddress));
+      return;
+    }
     addInstruction(localIR,
-                   newInstruction(OP_ASSIGN,
+                   newInstruction(OP_ARRAY_ASSIGN,
                                   arrAddress,
-                                  NULL,
+                                  newIntAddress0(0),
                                   initExprAddr));
+    addInstruction(localIR,
+                   newInstruction(OP_ARRAY_DECL,
+                                  newIntAddress0(arraySize),
+                                  newIntAddress0(elementSize),
+                                  arrAddress));
   }
   else
   {
     printf("in no init array\n");
     int ndim = addArrayDimensionSizes(localIR, type);
+    if (arrayIsDynamic(type))
+    {
+      compileError(varInitialiser->src, strlen(arrSymbol->name), "Array ('%s') size cannot be zero.\n" ANSI_COLOR_BLUE "Either specify all dimensions or use a initialiser list." ANSI_COLOR_RESET, arrSymbol->name);
+    }
     // ADD_ARRAY_DIMS();
     addInstruction(localIR,
                    newInstruction(OP_ARRAY_DECL,
-                                  newIntAddress(arraySize, (Coordinate){0, 0, 0}),
-                                  newIntAddress(elementSize, (Coordinate){0, 0, 0}),
+                                  newIntAddress0(arraySize),
+                                  newIntAddress0(ndim),
                                   arrAddress));
   }
 #undef ADD_ARRAY_DIMS

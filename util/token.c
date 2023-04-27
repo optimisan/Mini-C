@@ -3,7 +3,9 @@
 #include "AST.h"
 #include "../y.tab.h"
 #include <stdlib.h>
-
+#include <stdio.h>
+extern char *yytext;
+extern int lineno;
 char *tokenStr(int token)
 {
   switch (token)
@@ -81,4 +83,8 @@ char *tokenStr(int token)
     return s;
   }
   }
+}
+void printToken(int token)
+{
+  printf("%-10d\t\t %-18s\t\t %-18s\t\n", lineno, ((token == STRING) ? yylval.sValue : yytext), tokenStr(token));
 }

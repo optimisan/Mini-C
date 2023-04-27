@@ -83,6 +83,7 @@ typedef struct SymbolTable
 Type *newType(TypeEnum typeEnum);
 
 void initSymbolTable();
+TypeEnum typeWiden(TypeEnum t1, TypeEnum t2);
 
 int getHostSize(TypeEnum type);
 TypeEnum getArrayBaseType(Type *type);

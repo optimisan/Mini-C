@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
-int nextId = 0;
+int nextId = 0, nextLabelId = 0;
 // Since variables in a function won't be used outside,
 // we can reset the nextId back to the number of global variables
 // on parsing a function (and starting a new one)
@@ -42,13 +42,17 @@ Instruction *newInstruction(InstType op, Address *arg1, Address *arg2, Address *
   instruction->result = result;
   return instruction;
 }
+Address *newIntAddress0(int value)
+{
+  return newValueAddress(T_INT, &value, (Coordinate){0, 0, 0});
+}
+
 Address *newIntAddress(int value, Coordinate src)
 {
   return newValueAddress(T_INT, &value, src);
 }
 Address *newCharAddress(char value, Coordinate src)
 {
-  printf("Adding a character %c\n", value);
   return newValueAddress(T_CHAR, &value, src);
 }
 Address *newFloatAddress(float value, Coordinate src)
@@ -82,6 +86,7 @@ Address *functionAddress(Symbol *symbol, IR *ir)
   uintptr_t id = nextId++;
   hashmap_get_set(ir->map, symbol, sizeof(Symbol *), &id);
   address->id = id;
+  address->sym = symbol;
   address->isConstant = 0;
   address->src = symbol->src;
   printf("Got proto number os %d\n", symbol->type->size);
@@ -103,7 +108,7 @@ Address *symbolAddress(Symbol *symbol, IR *ir)
 Address *newLabelAddress()
 {
   Address *address = (Address *)malloc(sizeof(Address));
-  address->id = nextId++;
+  address->id = nextLabelId++;
   address->isConstant = 2;
   address->src = (Coordinate){0, 0, 0};
   address->type = newType(T_INT);
@@ -205,6 +210,8 @@ static char *instTypeToString(InstType type)
     return "OP_ARRAY_INDEX";
   case OP_ARRAY_ASSIGN:
     return "OP_ARRAY_ASSIGN";
+  case OP_FUNC_END:
+    return "OP_FUNC_END";
   default:
     char *s = malloc(sizeof(char) * 2);
     s[0] = type;
@@ -231,10 +238,12 @@ void printInstruction(Instruction *instruction, FILE *file)
 }
 void printIR(IR *ir, FILE *file)
 {
-  fprintf(file, "IR for %s\n", ir->sourceFileName);
+  printf("IR for %s\n", ir->sourceFileName);
   for (int i = 0; i < ir->size; i++)
   {
+    printf("on instruction %d\n", ir->instructions[i].op);
     printInstruction(&ir->instructions[i], file);
+    printf("done instruction %d\n", ir->instructions[i].op);
   }
 }
 void freeIR(IR *ir)
@@ -249,4 +258,5 @@ void writeIRtoFile(IR *ir)
   strcat(filename, ".ir");
   FILE *file = fopen(filename, "w");
   printIR(ir, file);
+  fclose(file);
 }

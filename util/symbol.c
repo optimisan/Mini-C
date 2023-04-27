@@ -141,10 +141,32 @@ TypeEnum getArrayBaseType(Type *type)
 int getArraySize(Type *type)
 {
   int size = 1;
-  while (type->type != NULL)
+  while (type->type)
   {
-    size *= type->size;
+    size *= (type->size == 0 ? 1 : type->size);
     type = type->type;
   }
   return size;
+}
+
+TypeEnum typeWiden(TypeEnum t1, TypeEnum t2)
+{
+  // arrays are not allowed
+  if (t1 == T_ARRAY || t2 == T_ARRAY)
+  {
+    return -1;
+  }
+  if (t1 == T_FLOAT || t2 == T_FLOAT)
+  {
+    return T_FLOAT;
+  }
+  if (t1 == T_INT || t2 == T_INT)
+  {
+    return T_INT;
+  }
+  if (t1 == T_CHAR || t2 == T_CHAR)
+  {
+    return T_CHAR;
+  }
+  return -1;
 }

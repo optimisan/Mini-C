@@ -72,7 +72,29 @@ void test(void *a)
 }
 #define TO_UINTPTR(x) (*(uintptr_t *)(&x))
 #define FROM_UINTPTR(x, type) (*(type *)(&x))
+hashmap *m;
+void store(int reg, uintptr_t value)
+{
+  int key[] = {reg};
+  hashmap_set(m, hashmap_static_arr(key), value);
+}
+
+uintptr_t load(int reg)
+{
+  uintptr_t value;
+  int key[] = {reg};
+  hashmap_get(m, hashmap_static_arr(key), &value);
+  return value;
+}
 int main()
+{
+  int a = 10;
+  float b = 4.56;
+  uintptr_t v1 = TO_UINTPTR(a);
+  uintptr_t v2 = TO_UINTPTR(b);
+  printf("%f\n", FROM_UINTPTR(v2, float));
+}
+void testmap()
 {
   // point_at_in_line(3, 5, 600);
   // st *a = malloc(sizeof(st));
@@ -89,5 +111,18 @@ int main()
   int *arr = malloc(sizeof(int) * 4);
   memcpy(arr, temp, sizeof(int) * 4);
   uintptr_t p = TO_UINTPTR(arr);
-  printf("%d", FROM_UINTPTR(p, int *)[0]);
+  // printf("%d", FROM_UINTPTR(p, int *)[0]);
+
+  m = hashmap_create();
+  store(1, TO_UINTPTR(a));
+  store(2, TO_UINTPTR(b));
+  uintptr_t val = load(1);
+  printf("%d", FROM_UINTPTR(val, int));
+  return 0;
+  int key = 1;
+  hashmap_set(m, &key, sizeof(int), TO_UINTPTR(a));
+  // uintptr_t val;
+  int key2 = 1 - 0 + 4 * 0;
+  hashmap_get(m, &key2, sizeof(int), &val);
+  printf("%d", FROM_UINTPTR(val, int));
 }

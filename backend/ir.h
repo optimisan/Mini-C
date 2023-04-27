@@ -6,7 +6,7 @@
 #include "../util/map.h"
 #include <stdio.h>
 
-extern int nextId;
+extern int nextId, nextLabelId;
 
 typedef struct
 {
@@ -40,7 +40,7 @@ typedef enum
   // Syntax is OP_ARRAY_INDEX[address, index, result]
   OP_ARRAY_INDEX,
   OP_ARRAY_ASSIGN,
-  OP_NOP, //=11
+  OP_FUNC_END, //=13
   // math are ascii
 } InstType;
 
@@ -65,6 +65,7 @@ typedef struct
 
 Address *newValueAddress(TypeEnum type, void *value, Coordinate src);
 Address *newLabelAddress();
+Address *newIntAddress0(int value);
 Address *newIntAddress(int value, Coordinate src);
 Address *newCharAddress(char value, Coordinate src);
 Address *newFloatAddress(float value, Coordinate src);

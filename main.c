@@ -9,6 +9,7 @@
 // extern yyin;
 SymbolTable *table;
 // extern char *yytext;
+extern int lineno;
 extern FILE *yyin;
 extern char *yytext;
 extern char *currentFileName;
@@ -17,11 +18,13 @@ int yyparse();
 
 void testTokenizer()
 {
-  printf("testTokenizer\n");
   int token;
+  printf(ANSI_COLOR_MAGENTA ANSI_COLOR_BOLD "%-10s\t\t %-18s\t\t %-18s\t\n" ANSI_COLOR_RESET, "Line number", "Lexeme", "Token Type");
+
   while ((token = yylex()) != EOF_TOKEN && token != 0)
   {
-    printf("%s: %s = %f\n", tokenStr(token), yytext, yylval.fValue);
+    // printf("%s: %s = %f\n", tokenStr(token), yytext, yylval.fValue);
+    printToken(token);
   }
   printf("EOF %d\n", token);
 }
@@ -41,7 +44,9 @@ int main(int argc, char *argv[])
   }
   currentFileName = argv[1];
 
-  // testTokenizer();
+  testTokenizer();
+  yyin = fopen(argv[1], "r");
+  lineno = 1;
   // return 0;
   // printf("Starting parser\n");
   initSymbolTable();

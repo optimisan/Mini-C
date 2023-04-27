@@ -19,7 +19,6 @@ Symbol* getSymbol(char* name, SymbolTable* table, Coordinate src, char* format, 
 void compileError(Coordinate pos, int lexemeLength, char *format, ...);
 void errorMessage(Coordinate pos, int lexemeLength, char *format, ...);
 int typeCheckAssign(TypeEnum t1, TypeEnum t2);
-TypeEnum typeWiden(TypeEnum t1, TypeEnum t2);
 void typeCheckUnary(Node* t);
 void typeCheckArrayInitialiser(Type* elementType, Node* expr);
 
@@ -101,17 +100,29 @@ declaration: functionDecl
 
 functionDecl: varType IDENTIFIER '(' param_list ')' 
                         {
-                            Symbol* funcSymbol = install($2.name, &identifiers, level, $2.src);
-                            if(funcSymbol->type){
-                                compileError($2.src, strlen($2.name), "Function %s already declared", $2.name);
-                            }
                             Type* funcType = malloc(sizeof(Type));
-                            funcSymbol->type = funcType;
-                            funcType->sym = funcSymbol;
+                            funcType->sym = NULL;
                             funcType->op = T_FUNCTION;
                             funcType->type = malloc(sizeof(Type));
                             funcType->type->op = $1;
                             currentFunctionType = funcType;
+                            beginScope();
+                        }
+            funcBody
+                {
+                    endScope();
+                    Symbol* funcSymbol = install($2.name, &identifiers, level, $2.src);
+                            if(funcSymbol->type){
+                                compileError($2.src, strlen($2.name), "Function %s already declared", $2.name);
+                            }
+                            // Type* funcType = malloc(sizeof(Type));
+                            // funcType->sym = funcSymbol;
+                            // funcType->op = T_FUNCTION;
+                            // funcType->type = malloc(sizeof(Type));
+                            // funcType->type->op = $1;
+                            // currentFunctionType = funcType;
+                            Type* funcType = currentFunctionType;
+                            funcSymbol->type = currentFunctionType;
                             int numParams=0;
                             Node* temp = $4;
                             while(temp){
@@ -140,12 +151,7 @@ functionDecl: varType IDENTIFIER '(' param_list ')'
                             }
                             // if(funcType->proto)
                             printf("func proto %d\n",1/* ,  funcType->proto[0]->op */);
-                            beginScope();
-                        }
-            funcBody
-                {
-                    endScope();
-                    Symbol* funcSymbol = lookup($2.name, identifiers);
+                    // Symbol* funcSymbol = lookup($2.name, identifiers);
                     // printNode(param_list_node);
                     $<node>$ = oprNode(OPR_FUNC, 3, identifierNode(funcSymbol), param_list_node, funcBodyNode);
                     currentFunctionType = NULL;
@@ -248,7 +254,7 @@ varDeclaration: varType varNames {
             outerType->op = $1;
             outerType->size = arrLastSize;
             // installed->type=outerType;
-            printf("Innermost type is %d\n", installed->type->op);
+            printf("Innermost type is %d\n", outerType->op);
         }
 
         // printf("\nType op of this var is %d\n", installed->type->op);
@@ -313,7 +319,7 @@ stmtOrDecl: stmtOrDecl stmt {$$ = oprNode(OPR_LIST, 2, $1, $2); funcBodyNode = $
     ; */
 
 stmt: ';' {$$ = NULL;}
-    | blockStmt
+    | blockStmt 
     /* | varDeclaration ';' */
     | assignExpr ';'
     /* | expr ';' */
@@ -355,6 +361,7 @@ assignExpr: IDENTIFIER '=' expr {
             }
     | IDENTIFIER INC {
                 Symbol* sym = getSymbol($1.name, identifiers, $1.src, "Variable '%s' not declared", $1.name);
+                compileError((Coordinate){lineno, col-2}, 2, "Increment operator not allowed");
                 if(sym->type->op != T_INT && sym->type->op != T_FLOAT){
                     compileError($1.src, strlen($1.name), "Only int and float can be incremented %s", $1.name);
                 }
@@ -362,13 +369,14 @@ assignExpr: IDENTIFIER '=' expr {
             }
     | IDENTIFIER DEC {
                 Symbol* sym = getSymbol($1.name, identifiers, $1.src, "Variable '%s' not declared", $1.name);
+                compileError((Coordinate){lineno, col-2}, 2, "Decrement operator not allowed");
                 if(sym->type->op != T_INT && sym->type->op != T_FLOAT){
                     compileError($1.src, strlen($1.name), "Only int and float can be decremented %s", $1.name);
                 }
                 $$ = oprNode(OPR_DEC, 1, identifierNode(sym));
             }
     | arrayExpr '=' expr {
-                printf("Got array type as %d\n", $1->exprType.op);
+                printf("Got array type as %d = %d\n", $1->exprType.op, $3->exprType.op);
                 if(!typeCheckAssign($1->exprType.op, $3->exprType.op)){
                     compileError($1->src, $3->src.length + $1->src.length, "Type mismatch in assignment to array");
                 }
@@ -472,9 +480,9 @@ arrayExpr: expr '[' expr ']' %prec ARR {
             compileError($3->src, $3->src.length, "Only int types can be used as indices.");
         }
         $$ = oprNode('[', 2, $1, $3);
+        $$->exprType.base = $1->exprType.base;
         $$->exprType.op = $1->exprType.ndim == 1 ? $1->exprType.base : T_ARRAY;
         $$->exprType.ndim = $1->exprType.ndim - 1;
-        // $$->exprType.op = $1->exprType.op->type;
         $$->src.length = $1->src.length + $3->src.length + 2;
     }
 
@@ -492,33 +500,37 @@ callExpr: IDENTIFIER '(' arg_list ')' {
                 Node *param = $3;
                 int i=callee->type->size-1;
                 printf("Starting with %d params\n", i);
+                //ignore type checking for variadic functions
+                if(!callee->type->variadicFunc){
+                        printf("here\n");
                 if(param){
-                    printf("here\n");
-                    while(param->as.opr.type==OPR_LIST && i >= 0){
-                        printf("Comparing with original type= %d\n", callee->type->proto[i]->op);
-                        if(!typeCheckAssign(callee->type->proto[i]->op, param->as.opr.operands[1]->exprType.op)){
-                            compileError(param->as.opr.operands[1]->src, param->as.opr.operands[1]->src.length, "Type mismatch in function call to '%s'", $1.name);
+                        while(param->as.opr.type==OPR_LIST && i >= 0){
+                            printf("Comparing with original type= %d\n", callee->type->proto[i]->op);
+                            if(!typeCheckAssign(callee->type->proto[i]->op, param->as.opr.operands[1]->exprType.op)){
+                                compileError(param->as.opr.operands[1]->src, param->as.opr.operands[1]->src.length, "Type mismatch in function call to '%s'", $1.name);
+                            }
+                            param = param->as.opr.operands[0];
+                            i--;
                         }
-                        param = param->as.opr.operands[0];
+                        if(i>=0){
+                        printf("Comparing with original type %d \n", /* param->exprType.op, */ callee->type->proto[i]->op);
+                        printf("inside %d\n", callee->type->proto[i] == NULL);}
+                        if(i<0 && !callee->type->variadicFunc) {
+                                compileError($1.src, strlen($1.name), "Too many parameters in function call to '%s'", $1.name);
+                        }
+                        if(!callee->type->variadicFunc && !typeCheckAssign(callee->type->proto[i]->op, param->exprType.op)){
+                            compileError($1.src, strlen($1.name), "Type mismatch in function call to '%s'", $1.name);
+                        }
                         i--;
                     }
-                    if(i>=0){
-                    printf("Comparing with original type %d \n", /* param->exprType.op, */ callee->type->proto[i]->op);
-                    printf("inside %d\n", callee->type->proto[i] == NULL);}
-                    if(i<0 && !callee->type->variadicFunc) {
-                            compileError($1.src, strlen($1.name), "Too many parameters in function call to '%s'", $1.name);
+                    if(i >= 0){
+                        compileError($1.src, strlen($1.name), "Too few parameters in function call to '%s'; expected %d", $1.name, callee->type->size);
                     }
-                    if(!callee->type->variadicFunc && !typeCheckAssign(callee->type->proto[i]->op, param->exprType.op)){
-                        compileError($1.src, strlen($1.name), "Type mismatch in function call to '%s'", $1.name);
-                    }
-                    i--;
-                }
-                if(i >= 0){
-                    compileError($1.src, strlen($1.name), "Too few parameters in function call to '%s'; expected %d", $1.name, callee->type->size);
                 }
                 $$ = oprNode(OPR_CALL, 2, identifierNode(callee), $3);
                 $$->exprType.op = callee->type->type->op;
                 printNode($$);
+                printf("\n");
     }
 
 arg_list: expr {$$ = $1;/* oprNode(OPR_LIST, 1,$1); */}
@@ -534,7 +546,7 @@ returnStmt: RETURN {
                 $$ = oprNode(OPR_RETURN, 0);
             } 
         | RETURN expr {
-            printf("Checking types %d %d\n", currentFunctionType->type->op, $2->exprType.op);
+            printf("Checking return types %d %d\n", currentFunctionType->type->op, $2->exprType.op);
             if(!typeCheckAssign(currentFunctionType->type->op, $2->exprType.op)){
                 compileError($2->src, $2->src.length, "Type mismatch in return statement");
             }
@@ -550,7 +562,7 @@ breakStmt: BREAK {$$ = oprNode(OPR_BREAK, 0);}
 void typeCheckArrayInitialiser(Type* elementType, Node* expr){
     Node* exprList = expr;
     TypeEnum baseType = getArrayBaseType(elementType);
-    printf("Starting array %d\n", elementType->type->op, exprList);
+    /* printf("Starting array %d\n", elementType->type->op, exprList); */
     printNode(exprList);
     printf("\n\n======\n");
     if(exprList == NULL) return;
@@ -625,26 +637,9 @@ int typeCheckAssign(TypeEnum varType, TypeEnum exprType){
     if(exprType == T_FLOAT && varType != T_FLOAT){
         return 0;
     }
-    return 1;
-}
 
-TypeEnum typeWiden(TypeEnum t1, TypeEnum t2){
-    //arrays are not allowed
-    if(t1 == T_ARRAY || t2 == T_ARRAY){
-        return -1;
-    }
-    if(t1 == T_FLOAT || t2 == T_FLOAT){
-        return T_FLOAT;
-    }
-    if(t1 == T_INT || t2 == T_INT){
-        return T_INT;
-    }
-    if(t1 == T_CHAR || t2 == T_CHAR){
-        return T_CHAR;
-    }
-    return -1;
+    return varType == exprType;
 }
-
 
 void point_at_in_line(int lineno, int from, int to);
 
@@ -663,8 +658,6 @@ Symbol* getSymbol(char* name, SymbolTable* table, Coordinate src, char* format, 
     }
     return foundIdentifier;
 }
-
-
 
 /**
     * Prints a message to stderr and exits the program

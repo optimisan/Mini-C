@@ -2152,6 +2152,7 @@ int yywrap(){
 int yyerror(char *s){
   fprintf(stderr, ANSI_COLOR_BOLD "%s[%d:%d]" ANSI_COLOR_RESET " %s at '%s'\n", currentFileName, lineno, col-1, s, yytext);
   point_at_in_line(lineno-1, col - yyleng-1, col-1);
+  exit(1);
 }
 
 char *getlineat(int lineno)

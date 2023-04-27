@@ -1,6 +1,11 @@
-// int h = 4 == 7 && 6;
-int main(int h)
+// Type: Mini C
+float main()
 {
-  char a[3][4] = {'a', 'd', 'f'};
-  a[1][2] = 'a';
+  if (2)
+  {
+    return 4.4;
+    int k = 7;
+  }
+  else
+    return 5 == 5;
 }
