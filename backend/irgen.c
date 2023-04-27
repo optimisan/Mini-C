@@ -10,6 +10,29 @@ void compileError(Coordinate pos, int lexemeLength, char *format, ...);
 
 IR *ir;
 Address *currentFunction = NULL;
+typedef struct
+{
+  Address *breakLabel;
+  Address *continueLabel;
+  struct ControlBlock *enclosing;
+} ControlBlock;
+
+ControlBlock *currentControlBlock = NULL;
+
+static void newControlBlock(Address *s, Address *e)
+{
+  ControlBlock *cb = malloc(sizeof(ControlBlock));
+  cb->continueLabel = s;
+  cb->breakLabel = e;
+  cb->enclosing = currentControlBlock;
+  currentControlBlock = cb;
+}
+static void endControlBlock()
+{
+  ControlBlock *cb = currentControlBlock;
+  currentControlBlock = currentControlBlock->enclosing;
+  free(cb);
+}
 
 static Address *irNode(Node *node);
 
@@ -29,6 +52,8 @@ static Address *irFuncCall(Node *node);
 static Address *irIf(Node *node);
 static Address *irWhile(Node *node);
 static Address *irFor(Node *node);
+static Address *irBreak(Node *node);
+static Address *irContinue(Node *node);
 static Address *irArrayExpr(Node *node);
 
 static Address *irNode(Node *node)
@@ -67,6 +92,12 @@ static Address *irNode(Node *node)
     case OPR_FOR:
       irFor(node);
       break;
+    case OPR_BREAK:
+      irBreak(node);
+      break;
+    case OPR_CONTINUE:
+      irContinue(node);
+      break;
     case '[':
       return irArrayExpr(node);
     case OPR_RETURN:
@@ -96,11 +127,31 @@ static Address *irNode(Node *node)
   }
   return NULL;
 }
-
+static Address *irBreak(Node *node)
+{
+  if (!currentControlBlock)
+  {
+    compileError(node->src, 5, "break statement not within loop or switch");
+    return NULL;
+  }
+  addInstruction(ir, newInstruction(OP_GOTO, NULL, NULL, currentControlBlock->breakLabel));
+  return NULL;
+}
+static Address *irContinue(Node *node)
+{
+  if (!currentControlBlock)
+  {
+    compileError(node->src, 5, "continue statement not within loop or switch");
+    return NULL;
+  }
+  addInstruction(ir, newInstruction(OP_GOTO, NULL, NULL, currentControlBlock->continueLabel));
+  return NULL;
+}
 static Address *irFor(Node *node)
 {
   Address *startLabel = newLabelAddress();
   Address *endLabel = newLabelAddress();
+  newControlBlock(startLabel, endLabel);
   irNode(node->as.opr.operands[0]);
   addInstruction(ir, newInstruction(OP_LABEL, NULL, NULL, startLabel));
   Address *condition = irNode(node->as.opr.operands[1]);
@@ -109,6 +160,7 @@ static Address *irFor(Node *node)
   irNode(node->as.opr.operands[2]);
   addInstruction(ir, newInstruction(OP_GOTO, NULL, NULL, startLabel));
   addInstruction(ir, newInstruction(OP_LABEL, NULL, NULL, endLabel));
+  endControlBlock();
   return NULL;
 }
 
@@ -116,12 +168,14 @@ static Address *irWhile(Node *node)
 {
   Address *startLabel = newLabelAddress();
   Address *endLabel = newLabelAddress();
+  newControlBlock(startLabel, endLabel);
   addInstruction(ir, newInstruction(OP_LABEL, NULL, NULL, startLabel));
   Address *condition = irNode(node->as.opr.operands[0]);
   addInstruction(ir, newInstruction(OP_IF_FALSE_GOTO, condition, NULL, endLabel));
   irNode(node->as.opr.operands[1]);
   addInstruction(ir, newInstruction(OP_GOTO, NULL, NULL, startLabel));
   addInstruction(ir, newInstruction(OP_LABEL, NULL, NULL, endLabel));
+  endControlBlock();
   return NULL;
 }
 

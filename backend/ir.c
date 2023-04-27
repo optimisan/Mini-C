@@ -212,6 +212,8 @@ static char *instTypeToString(InstType type)
     return "OP_ARRAY_ASSIGN";
   case OP_FUNC_END:
     return "OP_FUNC_END";
+  case OPR_EQ:
+    return "OPR_EQ";
   default:
     char *s = malloc(sizeof(char) * 2);
     s[0] = type;

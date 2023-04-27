@@ -22,6 +22,7 @@ void initVM(IR *ir)
 #define READ_INSTRUCTION() (vm.ir->instructions[vm.ip++])
 #define IS_AT_END() (vm.ip >= vm.ir->size)
 uintptr_t map[100];
+int labelMap[100];
 void store(int reg, uintptr_t value)
 {
   map[reg] = value;
@@ -44,8 +45,10 @@ uintptr_t load(int reg)
 // Save a label and its ip
 void saveLabel(Address *addr)
 {
-  uintptr_t ip = vm.ip;
-  hashmap_set(labels, &(addr->id), sizeof(int), TO_UINTPTR(vm.ip - 1));
+  labelMap[addr->id] = vm.ip - 1;
+  printf("\t\t\t\t\t\t\t\t\tSaved label L%d ip=%d", addr->id, vm.ip - 1);
+  // uintptr_t ip = vm.ip;
+  // hashmap_set(labels, &(addr->id), sizeof(int), TO_UINTPTR(vm.ip - 1));
 }
 // Save a function and its ip
 void saveFunction(Address *addr)
@@ -57,9 +60,10 @@ void saveFunction(Address *addr)
 // Get the ip of a label
 int getLabelIP(Address *addr)
 {
-  uintptr_t ip;
-  hashmap_get(labels, &(addr->id), sizeof(int), &ip);
-  return FROM_UINTPTR(ip, int);
+  return labelMap[addr->id];
+  // uintptr_t ip;
+  // hashmap_get(labels, &(addr->id), sizeof(int), &ip);
+  // return FROM_UINTPTR(ip, int);
 }
 // Get the ip of a function
 // Returns -1 if function is not found.
@@ -168,6 +172,15 @@ void installLabelsAndFunctions()
 }
 Instruction currentInstruction;
 
+void assignStatement();
+void callFunction();
+void returnStatement();
+void mathOperation();
+void arrayDeclaration();
+void arrayAssign();
+void arrayIndex();
+void handleParam();
+
 void executeGlobals()
 {
   vm.ip = 0;
@@ -177,8 +190,15 @@ void executeGlobals()
     switch (currentInstruction.op)
     {
     case OP_ASSIGN:
-      store(currentInstruction.result->id, getAddrValue(currentInstruction.arg1));
+      assignStatement();
       break;
+    case OP_ARRAY_ASSIGN:
+      arrayAssign();
+      break;
+    case OP_ARRAY_DECL:
+      arrayDeclaration();
+      break;
+
     case OP_FUNC:
       while ((currentInstruction = READ_INSTRUCTION()).op != OP_FUNC_END)
         ;
@@ -189,13 +209,6 @@ void executeGlobals()
     }
   }
 }
-
-void callFunction();
-void returnStatement();
-void mathOperation();
-void arrayDeclaration();
-void arrayAssign();
-void arrayIndex();
 
 Address *mainReturnValue;
 
@@ -215,17 +228,8 @@ void runVM()
       callFunction();
       break;
     case OP_ASSIGN:
-    {
-      uintptr_t value = getAddrValue(currentInstruction.arg1);
-      store(currentInstruction.result->id, getAddrValue(currentInstruction.arg1));
-      currentInstruction.result->type->size = currentInstruction.arg1->type->size;
-      currentInstruction.result->type->op = currentInstruction.arg1->type->op;
-      currentInstruction.result->type->sym = currentInstruction.arg1->type->sym;
-      currentInstruction.result->type->type = currentInstruction.arg1->type->type;
-
-      // printf("\t\t\tGot assign size = %d for t%d", currentInstruction.result->type->size, currentInstruction.result->id);
+      assignStatement();
       break;
-    }
     case OP_RETURN:
       returnStatement();
       break;
@@ -241,10 +245,26 @@ void runVM()
     case OP_FUNC:
     case OP_LABEL:
       break;
+    case OP_GOTO:
+      vm.ip = getLabelIP(currentInstruction.result);
+      break;
+    case OP_IF_GOTO:
+      if (getAddrIntValue(currentInstruction.arg1))
+      {
+        vm.ip = getLabelIP(currentInstruction.result);
+      }
+      break;
+    case OP_IF_FALSE_GOTO:
+      printf("yo here");
+      if (!getAddrIntValue(currentInstruction.arg1))
+      {
+        vm.ip = getLabelIP(currentInstruction.result);
+      }
+      break;
     case OP_FUNC_END:
       runtimeError("Unexpected function end.");
     case OP_PARAM:
-      push(currentInstruction.arg1);
+      handleParam();
       break;
     default:
       mathOperation();
@@ -255,6 +275,18 @@ void runVM()
   uintptr_t val = getAddrValue(mainReturnValue);
   printf("Main function returned: %d\n", FROM_UINTPTR(val, char));
 }
+
+void assignStatement()
+{
+  uintptr_t value = getAddrValue(currentInstruction.arg1);
+  store(currentInstruction.result->id, getAddrValue(currentInstruction.arg1));
+  currentInstruction.result->type->size = currentInstruction.arg1->type->size;
+  currentInstruction.result->type->op = currentInstruction.arg1->type->op;
+  currentInstruction.result->type->sym = currentInstruction.arg1->type->sym;
+  currentInstruction.result->type->type = currentInstruction.arg1->type->type;
+  // printf("\t\t\tGot assign size = %d for t%d", currentInstruction.result->type->size, currentInstruction.result->id);
+}
+
 void arrayIndex()
 {
   Address *arr = currentInstruction.arg1;
@@ -413,9 +445,21 @@ void returnStatement()
   }
   vm.ip = savedIp;
 }
+void handleParam()
+{
+  Instruction paramInstruction = currentInstruction;
+  if (paramInstruction.arg1)
+  {
+    // this is a function argument to be passed
+    push(currentInstruction.arg1);
+  }
+  else
+  {
+    runtimeError("Expected parameter.");
+  }
+}
 void callFunction()
 {
-  printf("Calling function\n");
   int savedIp = vm.ip;
   int ip = getFunctionIP(currentInstruction.arg1);
   if (ip == -1)
@@ -425,8 +469,8 @@ void callFunction()
     return dispatchNativeFunction(vm, currentInstruction);
   }
   vm.ip = ip;
-  Address *nparams = currentInstruction.arg1;
-  int n = nparams->as.integer;
+  int n = getAddrIntValue(currentInstruction.arg2);
+  printf("Calling function with %d params\n", n);
   while (n--)
   {
     Instruction paramIns = READ_INSTRUCTION();
