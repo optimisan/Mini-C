@@ -89,7 +89,6 @@ Address *functionAddress(Symbol *symbol, IR *ir)
   address->sym = symbol;
   address->isConstant = 0;
   address->src = symbol->src;
-  printf("Got proto number os %d\n", symbol->type->size);
   address->type = symbol->type;
   return address;
 }
@@ -240,12 +239,10 @@ void printInstruction(Instruction *instruction, FILE *file)
 }
 void printIR(IR *ir, FILE *file)
 {
-  printf("IR for %s\n", ir->sourceFileName);
+  // printf("IR for %s\n", ir->sourceFileName);
   for (int i = 0; i < ir->size; i++)
   {
-    printf("on instruction %d\n", ir->instructions[i].op);
     printInstruction(&ir->instructions[i], file);
-    printf("done instruction %d\n", ir->instructions[i].op);
   }
 }
 void freeIR(IR *ir)

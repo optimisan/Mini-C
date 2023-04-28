@@ -89,7 +89,6 @@ uintptr_t getAddrValue(Address *addr)
     case T_FLOAT:
       return TO_UINTPTR(addr->as.floating);
     case T_CHAR:
-      printf("\t\t\t\t\t\tgetaddrvalue=%d\n", addr->as.character);
       return TO_UINTPTR(addr->as.character);
     default:
       runtimeError("Invalid constant type.");
@@ -112,6 +111,7 @@ void push(Address *addr)
   }
   vmValue->value = getAddrValue(addr);
   vmValue->type = addr->type;
+  vmValue->src = addr->src;
   vmValue->next = vm.stack;
   vm.stack = vmValue;
 }
@@ -221,7 +221,7 @@ void runVM()
   currentInstruction = *newInstruction(OP_CALL, mainFuncAddr, newIntAddress0(0), mainReturnValue);
   for (; !(vm.ip > vm.ir->size); currentInstruction = READ_INSTRUCTION())
   {
-    printf("\t\tat %d\n", vm.ip);
+    // printf("\t\tat %d\n", vm.ip);
     switch (currentInstruction.op)
     {
     case OP_CALL:
@@ -255,7 +255,6 @@ void runVM()
       }
       break;
     case OP_IF_FALSE_GOTO:
-      printf("yo here");
       if (!getAddrIntValue(currentInstruction.arg1))
       {
         vm.ip = getLabelIP(currentInstruction.result);
@@ -273,7 +272,7 @@ void runVM()
     }
   }
   uintptr_t val = getAddrValue(mainReturnValue);
-  printf("Main function returned: %d\n", FROM_UINTPTR(val, char));
+  printf(ANSI_COLOR_BOLD ANSI_COLOR_MAGENTA "\n===== Execution complete! =====\n" ANSI_COLOR_RESET "Main function returned: %d\n", FROM_UINTPTR(val, int));
 }
 
 void assignStatement()
@@ -294,7 +293,7 @@ void arrayIndex()
   Address *target = currentInstruction.result;
   uintptr_t arrayBase = getAddrValue(arr);
   uintptr_t *arrBasePointer = FROM_UINTPTR(arrayBase, uintptr_t *);
-  printf("Indexing t%d is symbol=%d\n", arr->id, arr->sym != NULL);
+  // printf("Indexing t%d is symbol=%d\n", arr->id, arr->sym != NULL);
   if (offset >= arr->type->size || offset < 0)
   {
     runtimeMessage("Array index out of bounds-: " ANSI_COLOR_BOLD ANSI_COLOR_RED "(%d for size %d)\n" ANSI_COLOR_RESET, offset, arr->type->size);
@@ -317,7 +316,7 @@ void arrayAssign()
     runtimeError("Array index out of bounds: " ANSI_COLOR_BOLD ANSI_COLOR_RED "(%d for size of %d)\n" ANSI_COLOR_RESET, offsetInt, arr->type->size);
   }
   arrBasePointer[offsetInt] = getAddrValue(exprAddr);
-  printf("Successfully set %ld=%c\n", arrBasePointer[offsetInt], getAddrIntValue(exprAddr));
+  // printf("Successfully set %ld=%c\n", arrBasePointer[offsetInt], getAddrIntValue(exprAddr));
 }
 void arrayDeclaration()
 {
@@ -325,10 +324,10 @@ void arrayDeclaration()
   int size = getAddrIntValue(currentInstruction.arg1);
   int ndims = getAddrIntValue(currentInstruction.arg2);
   uintptr_t *array = malloc(size * sizeof(uintptr_t));
-  printf("Array type is %d and size is %d for t%d\n", getArrayBaseType(arr->type), currentInstruction.result->type->size, currentInstruction.result->id);
+  // printf("Array type is %d and size is %d for t%d\n", getArrayBaseType(arr->type), currentInstruction.result->type->size, currentInstruction.result->id);
   arr->type->size = size;
   arr->type->type = newType(getArrayBaseType(arr->type));
-  printf("Base pointer is %ld[0]= %d\n", TO_UINTPTR(array), array[0]);
+  // printf("Base pointer is %ld[0]= %d\n", TO_UINTPTR(array), array[0]);
   store(arr->id, TO_UINTPTR(array));
 }
 
@@ -366,7 +365,6 @@ void arrayDeclaration()
     val = (v1 <= v2);                 \
     break;                            \
   case OP_MINUS:                      \
-    printf("\t\t\t\t\thuh\n");        \
     val = -v1;                        \
     break;                            \
   default:                            \
@@ -428,7 +426,7 @@ void mathOperation()
 }
 void returnStatement()
 {
-  printf("\t stack has %d\n", stackLength());
+  // printf("\t stack has %d\n", stackLength());
   Address *returnValue = currentInstruction.arg1;
   uintptr_t val = popValue();
   int savedIp = FROM_UINTPTR(val, int);
@@ -440,7 +438,7 @@ void returnStatement()
   }
   {
     // else is the main function returning
-    printf("\t returning value %d to t%d\n", getAddrValue(returnValue), mainReturnValue->id);
+    // printf("\t returning value %d to t%d, going to ip=%d\n", getAddrValue(returnValue), mainReturnValue->id, savedIp);
     store(mainReturnValue->id, getAddrValue(returnValue));
   }
   vm.ip = savedIp;
@@ -464,13 +462,13 @@ void callFunction()
   int ip = getFunctionIP(currentInstruction.arg1);
   if (ip == -1)
   {
-    printf("Calling native function\n");
+    // printf("Calling native function\n");
     // vm.ip++;
     return dispatchNativeFunction(vm, currentInstruction);
   }
   vm.ip = ip;
   int n = getAddrIntValue(currentInstruction.arg2);
-  printf("Calling function with %d params\n", n);
+  // printf("Calling function with %d params\n", n);
   while (n--)
   {
     Instruction paramIns = READ_INSTRUCTION();

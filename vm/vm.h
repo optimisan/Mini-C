@@ -7,6 +7,7 @@ typedef struct VMValue
 {
   uintptr_t value;
   Type *type;
+  Coordinate src;
   struct VMValue *next;
 } VMValue;
 
@@ -26,6 +27,7 @@ typedef struct VM
 extern hashmap *registers, *labels, *functions;
 
 uintptr_t getAddrValue(Address *addr);
+int getAddrIntValue(Address *addr);
 // Store a value in a register
 void store(int reg, uintptr_t value);
 // Load from register

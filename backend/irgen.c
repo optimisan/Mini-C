@@ -10,7 +10,7 @@ void compileError(Coordinate pos, int lexemeLength, char *format, ...);
 
 IR *ir;
 Address *currentFunction = NULL;
-typedef struct
+typedef struct ControlBlock
 {
   Address *breakLabel;
   Address *continueLabel;
@@ -220,9 +220,8 @@ static Address *irFuncCall(Node *node)
     nparams++;
     addInstruction(ir, newInstruction(OP_PARAM, irNode(params), NULL, NULL));
   }
-  printf("\t nparams %d\n", nparams);
+  // printf("\t nparams %d\n", nparams);
   Symbol *sym = node->as.opr.operands[0]->as.symbol;
-  // int nparams1 = sym->type->size;
   Address *temp = newTempAddress(sym->type->type);
   Address *symAddr = symbolAddress(sym, ir);
   addInstruction(ir, newInstruction(OP_CALL, symAddr, newIntAddress(nparams, node->src), temp));
@@ -324,7 +323,7 @@ static Address *stringAddress(Value *value, Coordinate src)
   type->size = value->size + 1;
   type->type = elementType;
   Address *temp = newTempAddress(type);
-  printf("Adding string address for %s, size=%d\n", (char *)(value->as.data), type->size);
+  // printf("Adding string address for %s, size=%d\n", (char *)(value->as.data), type->size);
   int eleSize = getHostSize(T_CHAR);
   addInstruction(ir, newInstruction(OP_ARRAY_DECL, newIntAddress(value->size + 1, src), newIntAddress(eleSize, src), temp));
   for (int i = 0; i < value->size; i++)

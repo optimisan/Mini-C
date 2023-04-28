@@ -1,12 +1,7 @@
-int g[2] = {1};
-int dummy(int a, int b)
-{
-  return a + b;
-}
 int main()
 {
-  int a = dummy(24, 24);
-  return a;
+  return printf("printf digiti is %d", 24);
+  return 4;
 }
 // // Type: Mini C
 // float main()

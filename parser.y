@@ -83,7 +83,7 @@ int yylex();
 %%
 
 program: declarations EOF_TOKEN { 
-                        printf("Program end\n"); 
+                        // printf("Program end\n"); 
                         backend($1, currentFileName);
                         return 0;
                     }
@@ -98,7 +98,7 @@ declaration: functionDecl
     | varDeclaration ';'
     ;
 
-functionDecl: varType IDENTIFIER '(' param_list ')' 
+functionDecl: varType IDENTIFIER {beginScope();}'(' param_list ')' 
                         {
                             Type* funcType = malloc(sizeof(Type));
                             funcType->sym = NULL;
@@ -106,7 +106,6 @@ functionDecl: varType IDENTIFIER '(' param_list ')'
                             funcType->type = malloc(sizeof(Type));
                             funcType->type->op = $1;
                             currentFunctionType = funcType;
-                            beginScope();
                         }
             funcBody
                 {
@@ -124,7 +123,7 @@ functionDecl: varType IDENTIFIER '(' param_list ')'
                             Type* funcType = currentFunctionType;
                             funcSymbol->type = currentFunctionType;
                             int numParams=0;
-                            Node* temp = $4;
+                            Node* temp = $5;
                             while(temp){
                                 numParams++;
                                 if(temp->as.opr.nops == 2)
@@ -133,9 +132,9 @@ functionDecl: varType IDENTIFIER '(' param_list ')'
                             }
                             funcType->size = numParams;
                             funcType->proto = malloc(sizeof(Type*) * numParams);
-                            Node* param = $4;
+                            Node* param = $5;
                             int i=0;
-                            printf("donefg %d\n", numParams);
+                            // printf("donefg %d\n", numParams);
                             while(param){
                                 if(param->as.opr.nops == 2){
                                     //last param
@@ -150,7 +149,7 @@ functionDecl: varType IDENTIFIER '(' param_list ')'
                                 else param = NULL;
                             }
                             // if(funcType->proto)
-                            printf("func proto %d\n",1/* ,  funcType->proto[0]->op */);
+                            // printf("func proto %d\n",1/* ,  funcType->proto[0]->op */);
                     // Symbol* funcSymbol = lookup($2.name, identifiers);
                     // printNode(param_list_node);
                     $<node>$ = oprNode(OPR_FUNC, 3, identifierNode(funcSymbol), param_list_node, funcBodyNode);
@@ -303,9 +302,9 @@ arraySpecifier: arraySpecifier '[' INTEGER ']' {
     | { $$ = NULL; }
     ;
 
-funcBody: '{' {beginScope(); $<node>$ = NULL;}
+funcBody: '{' {$<node>$ = NULL;}
             stmtOrDecl
-          '}' {endScope(); $$ = $<node>2; printf("Printing stmtordecl\n"); printNode(funcBodyNode);}
+          '}' { $$ = $3;}
           ;
 
 stmtOrDecl: stmtOrDecl stmt {$$ = oprNode(OPR_LIST, 2, $1, $2); funcBodyNode = $$;}
@@ -499,13 +498,13 @@ callExpr: IDENTIFIER '(' arg_list ')' {
                 //Type check all parameters
                 Node *param = $3;
                 int i=callee->type->size-1;
-                printf("Starting with %d params\n", i);
+                // printf("Starting with %d params\n", i);
                 //ignore type checking for variadic functions
                 if(!callee->type->variadicFunc){
-                        printf("here\n");
+                        // printf("here\n");
                 if(param){
                         while(param->as.opr.type==OPR_LIST && i >= 0){
-                            printf("Comparing with original type= %d\n", callee->type->proto[i]->op);
+                            // printf("Comparing with original type= %d\n", callee->type->proto[i]->op);
                             if(!typeCheckAssign(callee->type->proto[i]->op, param->as.opr.operands[1]->exprType.op)){
                                 compileError(param->as.opr.operands[1]->src, param->as.opr.operands[1]->src.length, "Type mismatch in function call to '%s'", $1.name);
                             }
@@ -513,7 +512,7 @@ callExpr: IDENTIFIER '(' arg_list ')' {
                             i--;
                         }
                         if(i>=0){
-                        printf("Comparing with original type %d \n", /* param->exprType.op, */ callee->type->proto[i]->op);
+                        // printf("Comparing with original type %d \n", /* param->exprType.op, */ callee->type->proto[i]->op);
                         printf("inside %d\n", callee->type->proto[i] == NULL);}
                         if(i<0 && !callee->type->variadicFunc) {
                                 compileError($1.src, strlen($1.name), "Too many parameters in function call to '%s'", $1.name);
@@ -529,7 +528,7 @@ callExpr: IDENTIFIER '(' arg_list ')' {
                 }
                 $$ = oprNode(OPR_CALL, 2, identifierNode(callee), $3);
                 $$->exprType.op = callee->type->type->op;
-                printNode($$);
+                // printNode($$);
                 printf("\n");
     }
 
@@ -546,7 +545,6 @@ returnStmt: RETURN {
                 $$ = oprNode(OPR_RETURN, 0);
             } 
         | RETURN expr {
-            printf("Checking return types %d %d\n", currentFunctionType->type->op, $2->exprType.op);
             if(!typeCheckAssign(currentFunctionType->type->op, $2->exprType.op)){
                 compileError($2->src, $2->src.length, "Type mismatch in return statement");
             }

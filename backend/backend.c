@@ -7,14 +7,13 @@
 
 void backend(Node *astRootNode, char *sourceFileName)
 {
-  printf("==== Backend ====\n");
+  printf(ANSI_COLOR_BOLD ANSI_COLOR_CYAN "Parsed successfully\n==== Backend ====\n" ANSI_COLOR_RESET);
   printNode(astRootNode);
-  printf("\nDone print\n");
-  printf("Generating IR...\n");
+  printf(ANSI_COLOR_BOLD ANSI_COLOR_BLUE "\n==== Generating IR ====\n" ANSI_COLOR_RESET);
   IR *ir = generateIR(astRootNode, sourceFileName);
-  printf("Writing IR...\n");
+  printf("\nWriting IR... ");
   writeIRtoFile(ir);
-  printf("Executing IR...\n");
+  printf("See %s for the IR\n" ANSI_COLOR_BOLD ANSI_COLOR_GREEN "==== Executing IR... ====\n" ANSI_COLOR_RESET, sourceFileName);
   initVM(ir);
   runVM();
 }

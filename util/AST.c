@@ -202,10 +202,10 @@ void freeFunctionAST(Node *node)
   {
     // free the param list
     freeNode(node->as.opr.operands[1]);
-    printf("Freed param list for function\n");
+    // printf("Freed param list for function\n");
     // free the body
     freeNode(node->as.opr.operands[2]);
-    printf("Freed body for function\n");
+    // printf("Freed body for function\n");
   }
 }
 
