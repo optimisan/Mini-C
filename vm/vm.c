@@ -46,7 +46,6 @@ uintptr_t load(int reg)
 void saveLabel(Address *addr)
 {
   labelMap[addr->id] = vm.ip - 1;
-  printf("\t\t\t\t\t\t\t\t\tSaved label L%d ip=%d", addr->id, vm.ip - 1);
   // uintptr_t ip = vm.ip;
   // hashmap_set(labels, &(addr->id), sizeof(int), TO_UINTPTR(vm.ip - 1));
 }
@@ -283,7 +282,7 @@ void assignStatement()
   currentInstruction.result->type->op = currentInstruction.arg1->type->op;
   currentInstruction.result->type->sym = currentInstruction.arg1->type->sym;
   currentInstruction.result->type->type = currentInstruction.arg1->type->type;
-  // printf("\t\t\tGot assign size = %d for t%d", currentInstruction.result->type->size, currentInstruction.result->id);
+  // printf("\t\t\tGot assign type op= %d for t%d\n", getArrayBaseType(currentInstruction.arg1->type), currentInstruction.result->id);
 }
 
 void arrayIndex()
@@ -293,7 +292,8 @@ void arrayIndex()
   Address *target = currentInstruction.result;
   uintptr_t arrayBase = getAddrValue(arr);
   uintptr_t *arrBasePointer = FROM_UINTPTR(arrayBase, uintptr_t *);
-  // printf("Indexing t%d is symbol=%d\n", arr->id, arr->sym != NULL);
+  target->type = newType(getArrayBaseType(arr->type));
+  // printf("Indexing t%d is symbol= %d\n", arr->id, target->type->op);
   if (offset >= arr->type->size || offset < 0)
   {
     runtimeMessage("Array index out of bounds-: " ANSI_COLOR_BOLD ANSI_COLOR_RED "(%d for size %d)\n" ANSI_COLOR_RESET, offset, arr->type->size);
@@ -352,13 +352,13 @@ void arrayDeclaration()
   case OPR_NE:                        \
     val = (v1 != v2);                 \
     break;                            \
-  case OPR_GT:                        \
+  case '>':                           \
     val = (v1 > v2);                  \
     break;                            \
   case OPR_GE:                        \
     val = (v1 >= v2);                 \
     break;                            \
-  case OPR_LT:                        \
+  case '<':                           \
     val = (v1 < v2);                  \
     break;                            \
   case OPR_LE:                        \
@@ -452,6 +452,7 @@ void handleParam()
   Instruction paramInstruction = currentInstruction;
   if (paramInstruction.arg1)
   {
+    // printf("\t\tPushing of type %d\n", paramInstruction.arg1->type->op);
     // this is a function argument to be passed
     push(currentInstruction.arg1);
   }
@@ -487,18 +488,19 @@ void callFunction()
   push(newIntAddress0(TO_UINTPTR(savedIp)));
 }
 
-#define WRITE_MESSAGE()                                                               \
-  va_list args;                                                                       \
-  va_start(args, message);                                                            \
-  fprintf(stderr, ANSI_COLOR_BOLD ANSI_COLOR_RED "Runtime Error: " ANSI_COLOR_RESET); \
+#define WRITE_MESSAGE()    \
+  va_list args;            \
+  va_start(args, message); \
   vfprintf(stderr, message, args);
 
 void runtimeError(char *message, ...)
 {
+  fprintf(stderr, ANSI_COLOR_BOLD ANSI_COLOR_RED "Runtime Error: " ANSI_COLOR_RESET);
   WRITE_MESSAGE();
   exit(1);
 }
 void runtimeMessage(char *message, ...)
 {
+  fprintf(stderr, ANSI_COLOR_BOLD ANSI_COLOR_CYAN "Warning: " ANSI_COLOR_RESET);
   WRITE_MESSAGE();
 }

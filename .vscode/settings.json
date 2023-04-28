@@ -36,7 +36,8 @@
     "varargs.h": "c",
     "token.h": "c",
     "symbol.h": "c",
-    "y.tab.h": "c"
+    "y.tab.h": "c",
+    "time.h": "c"
   },
   "cmake.configureOnOpen": true
 }

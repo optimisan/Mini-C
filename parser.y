@@ -98,7 +98,15 @@ declaration: functionDecl
     | varDeclaration ';'
     ;
 
-functionDecl: varType IDENTIFIER {beginScope();}'(' param_list ')' 
+functionDecl: varType IDENTIFIER {
+                        Symbol* funcSymbol = install($2.name, &identifiers, level, $2.src);
+                        if(funcSymbol->type){
+                            errorMessage($2.src, strlen($2.name), ANSI_COLOR_BOLD ANSI_COLOR_CYAN "Note: " ANSI_COLOR_RESET "Function '%s' already declared", $2.name);
+                            compileError(funcSymbol->src, strlen($2.name), "Declared here:");
+                        }
+                        beginScope();
+                        }
+            '(' param_list ')' 
                         {
                             Type* funcType = malloc(sizeof(Type));
                             funcType->sym = NULL;
@@ -111,9 +119,6 @@ functionDecl: varType IDENTIFIER {beginScope();}'(' param_list ')'
                 {
                     endScope();
                     Symbol* funcSymbol = install($2.name, &identifiers, level, $2.src);
-                            if(funcSymbol->type){
-                                compileError($2.src, strlen($2.name), "Function %s already declared", $2.name);
-                            }
                             // Type* funcType = malloc(sizeof(Type));
                             // funcType->sym = funcSymbol;
                             // funcType->op = T_FUNCTION;
@@ -224,7 +229,7 @@ varDeclaration: varType varNames {
         Symbol* installed = install(varSymbol->name, &identifiers, level, varSymbol->src);
         Coordinate src = varSymbol->src;
         if(installed->type){
-            errorMessage(varInitialiser->src, strlen(varSymbol->name), "Error: Variable '%s' already declared", varSymbol->name);
+            errorMessage(varInitialiser->src, strlen(varSymbol->name), ANSI_COLOR_BOLD ANSI_COLOR_CYAN "Note: " ANSI_COLOR_RESET "Variable '%s' already declared", varSymbol->name);
             compileError(varSymbol->src, strlen(varSymbol->name), "Declared here");
         }
         Type* type = malloc(sizeof(Type));
@@ -662,7 +667,6 @@ Symbol* getSymbol(char* name, SymbolTable* table, Coordinate src, char* format, 
     * @param format The format string
     * @param ... The arguments to the format string
 */
-
 void compileError(Coordinate src, int lexemeLength, char* format, ...){
     va_list args;
     va_start(args, format);

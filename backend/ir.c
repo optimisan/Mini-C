@@ -15,11 +15,11 @@ int savedNextId = 0;
 
 void beginFunction()
 {
-  savedNextId = nextId;
+  // savedNextId = nextId;
 }
 void endFunction()
 {
-  nextId = savedNextId;
+  // nextId = savedNextId;
 }
 
 IR *newIR(char *sourceFileName)
