@@ -1,3 +1,4 @@
+#include <stdio.h>
 int main()
 {
   return printf("printf digiti is %d", 24);

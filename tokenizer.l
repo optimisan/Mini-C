@@ -29,6 +29,9 @@ nonzero [1-9]
 %%
       char string_buf[MAX_STR_CONST];
       char *string_buf_ptr;
+
+
+
  //Keywords
 "int" {return K_INT;} 
 "float" {return K_FLOAT;}
@@ -43,6 +46,11 @@ nonzero [1-9]
 "continue" {return CONTINUE;}
 "break" {return BREAK;}
 "default" {return DEFAULT;}
+
+"#include".*(\n) {col = 1; lineno++;
+                  fprintf(stderr, ANSI_COLOR_BOLD ANSI_COLOR_YELLOW "Note: " ANSI_COLOR_RESET "Include directives are ignored\n");
+                  point_at_in_line(lineno-2, 0, 8);
+                }
 
  /* Symbols */
 [-+*/%] return *yytext;
