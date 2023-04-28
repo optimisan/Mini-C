@@ -4,6 +4,35 @@ A compiler for a subset of C, made using lex and yacc.
 
 ## Language features
 
+Before we get to my writeup, here is a program that can successfully run:
+
+```c
+int factorial(int n)
+{
+  int a = 1;
+  for (int i = 1; i <= n; i = i + 1)
+  {
+    a = a * i;
+  }
+  return a;
+}
+int main()
+{
+  int start = time();
+  char str[] = "Factorial is %d\n";
+  for (int i = 1; i < 20; i = i + 1)
+  {
+    printf(str, factorial(i));
+  }
+  int end = time();
+  int writtenChars = printf("Time taken: %d milliseconds\n", end - start);
+  return writtenChars;
+}
+```
+
+Looks good to me although `factorial` ends up returning negative values due to overflow.
+`time()` also returns negative values of the milliseconds since epoch, but the difference is correct.
+
 ### Error reporting
 
 The compiler provides the approximate location of the syntax/semantic error in the source file.

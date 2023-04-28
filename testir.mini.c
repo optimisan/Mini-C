@@ -31,9 +31,26 @@
 //   printf("\n%f", b - a);
 //   return 0;
 // }
+int factorial(int n)
+{
+  int a = 1;
+  for (int i = 1; i <= n; i = i + 1)
+  {
+    a = a * i;
+  }
+  return a;
+}
 int main()
 {
-  int a[];
+  int start = time();
+  char str[] = "Factorial is %d\n";
+  for (int i = 1; i < 20; i = i + 1)
+  {
+    printf(str, factorial(i));
+  }
+  int end = time();
+  int writtenChars = printf("Time taken: %d milliseconds\n", end - start);
+  return writtenChars;
 }
 // // Type: Mini C
 /*
