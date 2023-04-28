@@ -26,7 +26,7 @@ void testTokenizer()
     // printf("%s: %s = %f\n", tokenStr(token), yytext, yylval.fValue);
     printToken(token);
   }
-  printf("EOF %d\n", token);
+  printf("%-10d\t\t %-18s\t\t %-18s\t\n", lineno, "EOF", "EOF");
 }
 
 int main(int argc, char *argv[])

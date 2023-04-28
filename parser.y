@@ -208,18 +208,18 @@ array_init_list: expr { /* $$ = oprNode(OPR_LIST, 1, $1); */}
 
 varDeclaration: varType varNames {
     $$ = oprNode(OPR_VAR_DECL, 1, $2);
-    printf("Found var decl %d, \n", $2->as.opr.type);
+    // printf("Found var decl %d, \n", $2->as.opr.type);
     //iterate through the list of variables and add them to the symbol table
     Node* varName = $2;
     while(varName != NULL) {
         Node* varInitialiser;
         if(varName->as.opr.type == OPR_LIST) {
             varInitialiser = varName->as.opr.operands[1];
-            printf("Found list %d\n", varInitialiser->as.opr.type);
+            // printf("Found list %d\n", varInitialiser->as.opr.type);
         } else {
             varInitialiser = varName;
         }
-        printf("Found var decl for '%s', \n", varInitialiser->as.opr.operands[0]->as.symbol->name);
+        // printf("Found var decl for '%s', \n", varInitialiser->as.opr.operands[0]->as.symbol->name);
         Symbol* varSymbol = varInitialiser->as.opr.operands[0]->as.symbol;
         Symbol* installed = install(varSymbol->name, &identifiers, level, varSymbol->src);
         Coordinate src = varSymbol->src;
@@ -253,7 +253,7 @@ varDeclaration: varType varNames {
             outerType->op = $1;
             outerType->size = arrLastSize;
             // installed->type=outerType;
-            printf("Innermost type is %d\n", outerType->op);
+            // printf("Innermost type is %d\n", outerType->op);
         }
 
         // printf("\nType op of this var is %d\n", installed->type->op);
@@ -375,7 +375,7 @@ assignExpr: IDENTIFIER '=' expr {
                 $$ = oprNode(OPR_DEC, 1, identifierNode(sym));
             }
     | arrayExpr '=' expr {
-                printf("Got array type as %d = %d\n", $1->exprType.op, $3->exprType.op);
+                // printf("Got array type as %d = %d\n", $1->exprType.op, $3->exprType.op);
                 if(!typeCheckAssign($1->exprType.op, $3->exprType.op)){
                     compileError($1->src, $3->src.length + $1->src.length, "Type mismatch in assignment to array");
                 }
@@ -400,7 +400,7 @@ switchStmt:
                                     ANSI_COLOR_BOLD ANSI_COLOR_BLUE 
                                     "Warning: " ANSI_COLOR_RESET "Switch statement is not implemented");
                     }
-    '(' expr ')' {beginScope();} '{' switchBody '}' { printf("switch end\n"); $$ = NULL; endScope();}
+    '(' expr ')' {beginScope();} '{' switchBody '}' { $$ = NULL; endScope();}
 switchBody: switchList | {$$ = NULL;};
 switchList: stmt
     | varDeclaration
@@ -471,7 +471,7 @@ expr: INTEGER {$$ = intNode($1);}
     ;
 
 arrayExpr: expr '[' expr ']' %prec ARR {
-        printf("Found array expression type %d\n", $1->exprType.ndim);
+        // printf("Found array expression type %d\n", $1->exprType.ndim);
         if($1->exprType.op != T_ARRAY){
             compileError($1->src, $1->src.length + $3->src.length + 2, "Invalid indexing target. Only array types can be indexed.");
         }
@@ -561,13 +561,13 @@ void typeCheckArrayInitialiser(Type* elementType, Node* expr){
     Node* exprList = expr;
     TypeEnum baseType = getArrayBaseType(elementType);
     /* printf("Starting array %d\n", elementType->type->op, exprList); */
-    printNode(exprList);
-    printf("\n\n======\n");
+    /* printNode(exprList);
+    printf("\n\n======\n"); */
     if(exprList == NULL) return;
     //if it is not a list, this is the last element
     if(exprList->type != NODE_OPR && exprList->as.opr.type != OPR_LIST){
         Node* insideElement = exprList;//->as.opr.operands[0];
-        printf("Checking 1) %d %d\n", elementType->type->op, insideElement->exprType.op);
+        /* printf("Checking 1) %d %d\n", elementType->type->op, insideElement->exprType.op); */
         if(!typeCheckAssign(elementType->type->op, insideElement->exprType.op) && !typeCheckAssign(baseType, insideElement->exprType.op)){
             compileError( insideElement->src,  insideElement->src.length, "Invalid array element type %d %d", elementType->type->op, insideElement->exprType.op);
         }
@@ -583,7 +583,7 @@ void typeCheckArrayInitialiser(Type* elementType, Node* expr){
             typeCheckArrayInitialiser(elementType->type, exprList->as.opr.operands[1]);
         }
         TypeEnum baseType = getArrayBaseType(elementType);
-        printf("Checking 2) %d %d\n", baseType, localElement->exprType.op);
+        /* printf("Checking 2) %d %d\n", baseType, localElement->exprType.op); */
         if(localElement->exprType.op != baseType && localElement->exprType.op != elementType->type->op){
             compileError(localElement->src, localElement->src.length, "Invalid array element type 2");
         }

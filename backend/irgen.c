@@ -60,8 +60,6 @@ static Address *irNode(Node *node)
 {
   if (node == NULL)
     return NULL;
-  // printNode(node);
-  // return NULL;
   if (node->type == NODE_OPR)
   {
     switch (node->as.opr.type)
@@ -131,7 +129,7 @@ static Address *irBreak(Node *node)
 {
   if (!currentControlBlock)
   {
-    compileError(node->src, 5, "break statement not within loop or switch");
+    compileError(node->src, 5, "Break statement not within loop or switch");
     return NULL;
   }
   addInstruction(ir, newInstruction(OP_GOTO, NULL, NULL, currentControlBlock->breakLabel));
@@ -141,7 +139,7 @@ static Address *irContinue(Node *node)
 {
   if (!currentControlBlock)
   {
-    compileError(node->src, 5, "continue statement not within loop or switch");
+    compileError(node->src, 5, "Continue statement not within loop or switch");
     return NULL;
   }
   addInstruction(ir, newInstruction(OP_GOTO, NULL, NULL, currentControlBlock->continueLabel));
@@ -246,7 +244,7 @@ static ArrayInfo getArrayIndexOffset(Node *arrIndex, Type *type)
   }
   else
   {
-    printf("Outer type size if %d and inner is %d\n", type->size, type->type->size);
+    // printf("Outer type size if %d and inner is %d\n", type->size, type->type->size);
     // second element is the index at this level
     Address *currentOffset = irNode(arrIndex->as.opr.operands[1]);                       // 24
     ArrayInfo innerInfo = getArrayIndexOffset(arrIndex->as.opr.operands[0], type->type); // 12, 1
@@ -258,7 +256,7 @@ static ArrayInfo getArrayIndexOffset(Node *arrIndex, Type *type)
 }
 static Symbol *getArrayBase(Node *arrIndex)
 {
-  printf("Getting array base for type %d\n", arrIndex->as.opr.type == '[');
+  // printf("Getting array base for type %d\n", arrIndex->as.opr.type == '[');
   while (arrIndex->type == NODE_OPR && arrIndex->as.opr.type == '[')
   {
     arrIndex = arrIndex->as.opr.operands[0];
@@ -281,6 +279,8 @@ static Address *indexArrayWithOpAs(Node *node, InstType opType, Address *result)
   if (!result)
   {
     result = newTempAddress(sym->type);
+    result->type->size = getArraySize(sym->type);
+    result->type->op = getArrayBaseType(sym->type);
   }
   // addInstruction(ir, newInstruction('*', newIntAddress(getHostSize(getArrayBaseType(sym->type)), node->src), offset, offset));
   addInstruction(ir, newInstruction(opType, base, offset, result));
@@ -305,11 +305,11 @@ static Address *irExpr(Node *node)
   }
   else if (node->as.opr.nops == 2)
   {
-    printf("got binary expr %d\n", node->as.opr.operands[0]->type);
+    // printf("got binary expr %d\n", node->as.opr.operands[0]->type);
     Address *left = irNode(node->as.opr.operands[0]);
     Address *right = irNode(node->as.opr.operands[1]);
     Address *temp = newTempAddress(newType(node->exprType.op));
-    printf("got left as %d", left == NULL);
+    // printf("got left as %d", left == NULL);
     addInstruction(ir, newInstruction(node->as.opr.type, left, right, temp));
     return temp;
   }
@@ -496,7 +496,7 @@ static void arrayDeclaration(IR *localIR, Node *varInitialiser)
   TypeEnum baseType = getArrayBaseType(type);
   int elementSize = getHostSize(baseType);
   int arraySize = getArraySize(arrSymbol->type);
-  printf("In array decl\n");
+  // printf("In array decl\n");
   Node *initExpr = varInitialiser->as.opr.operands[2];
   int ndim = 0;
   if (initExpr && initExpr->type == NODE_OPR && initExpr->as.opr.type == OPR_LIST)
@@ -512,7 +512,7 @@ static void arrayDeclaration(IR *localIR, Node *varInitialiser)
     }
     arraySize = max(arraySize, numberOfElementsInit);
     arrAddress->type = type;
-    printf("\t\t\t\tIn array init %d\n", symbolAddress(arrSymbol, ir)->type->size);
+    // printf("\t\t\t\tIn array init %d\n", symbolAddress(arrSymbol, ir)->type->size);
 
     // ADD_ARRAY_DIMS();
     addInstruction(localIR,
@@ -525,7 +525,7 @@ static void arrayDeclaration(IR *localIR, Node *varInitialiser)
   {
     Address *initExprAddr = irNode(initExpr);
     symbolAddress(arrSymbol, ir)->type = initExprAddr->type;
-    printf("in array assign with size as %d\n", symbolAddress(arrSymbol, ir)->type->size);
+    // printf("in array assign with size as %d\n", symbolAddress(arrSymbol, ir)->type->size);
     if (initExpr->type == NODE_LITERAL && initExpr->as.value->type == T_ARRAY)
     {
       addInstruction(localIR, newInstruction(OP_ASSIGN, initExprAddr, NULL, arrAddress));
@@ -545,7 +545,7 @@ static void arrayDeclaration(IR *localIR, Node *varInitialiser)
   }
   else
   {
-    printf("in no init array\n");
+    // printf("in no init array\n");
     int ndim = addArrayDimensionSizes(localIR, type);
     if (arrayIsDynamic(type))
     {
@@ -580,7 +580,7 @@ static Address *irVarDecl(Node *node)
     addInstruction(localIR, newInstruction(OP_ASSIGN, expr, NULL, left)); \
   }
   //^ Second operand is the array specifier, so ignore
-  printf("handling vr decl\n");
+  // printf("handling vr decl\n");
   Node *list = node->as.opr.operands[0];
   // Since we are going in reverse (actually should be depth first),
   // we need to store the instructions in an array
@@ -605,7 +605,7 @@ static Address *irVarDecl(Node *node)
   {
     addInstruction(ir, &(localIR->instructions[i]));
   }
-  printf("Adding back instructions\n");
+  // printf("Adding back instructions\n");
 #undef ADD_VAR_DECL
 }
 static Address *irAssign(Node *node)

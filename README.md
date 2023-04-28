@@ -4,14 +4,36 @@ A compiler for a subset of C, made using lex and yacc.
 
 ## Language features
 
-1. Type: int, float, char
-2. Basic statements: expression statement, assignment statements, and compound statements, declaration statement.
-3. Control and looping statements: if statement, for statement, while statement, and
-   switch statement. (note that nesting of these statements is also possible.)
-4. System functions: printf and scanf statements.
-5. Other: Variables, arrays, and function
+### Error reporting
 
-The syntax for the above is same as in C language. The structure of the input program is also same as a C program.
+The compiler provides the approximate location of the syntax/semantic error in the source file.
+
+**Array out of bounds check**
+Array indices are checked at runtime for out-of-bound accesses!
+
+### Types
+
+`int`, `char`, `float` and n-dimensional arrays.
+
+> There is no way to convert between types via implicit or explicit type casts.
+
+### Statements
+
+Almost all math expressions: Do not work on arrays.
+
+Control flow: if-else, for, while
+
+Variable declarations can be aggregated with commas: `int a=3, b=4;`
+
+### Functions
+
+Functions cannot have `void` return type. Only `int`, `char` and `float` can be returned.
+
+> This limitation is only because of the syntax (there is no syntax defined to represent array types)
+
+#### System functions
+
+As of now, `printf` is the only system function. It works like the 'real' `printf(char* format, ...)` where the first argument must be a character string.
 
 ## Running
 

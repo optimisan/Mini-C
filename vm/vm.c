@@ -272,7 +272,7 @@ void runVM()
     }
   }
   uintptr_t val = getAddrValue(mainReturnValue);
-  printf(ANSI_COLOR_BOLD ANSI_COLOR_MAGENTA "\n===== Execution complete! =====\n" ANSI_COLOR_RESET "Main function returned: %d\n", FROM_UINTPTR(val, int));
+  printf(ANSI_COLOR_BOLD ANSI_COLOR_PINK "\n===== Execution complete! =====\n" ANSI_COLOR_RESET "Main function returned: %d\n", FROM_UINTPTR(val, int));
 }
 
 void assignStatement()
@@ -395,13 +395,17 @@ uintptr_t getMathResult()
 
   InstType op = currentInstruction.op;
   TypeEnum type = typeWiden(arg1->type->op, (arg2 ? arg2->type->op : T_FLOAT));
+  if (!arg2)
+  {
+    type = arg1->type->op;
+  }
   if (type == T_FLOAT)
   {
     return operateAsFloat(val1, val2, arg1->type->op, (arg2 ? arg2->type->op : T_FLOAT), op);
   }
   int v1 = FROM_UINTPTR(val1, int);
   int v2 = FROM_UINTPTR(val2, int);
-  uintptr_t val;
+  int val;
   switch (op)
   {
   case OPR_AND:
@@ -417,7 +421,7 @@ uintptr_t getMathResult()
     MATH_OPERATIONS(op);
     break;
   }
-  return val;
+  return TO_UINTPTR(val);
 }
 void mathOperation()
 {
