@@ -158,7 +158,7 @@ int yywrap(){
 
 
 int yyerror(char *s){
-  fprintf(stderr, ANSI_COLOR_BOLD "%s[%d:%d]" ANSI_COLOR_RESET " %s at '%s'\n", currentFileName, lineno, col-1, s, yytext);
+  fprintf(stderr, ANSI_COLOR_BOLD "%s[%d:%d] "ANSI_COLOR_RED "%s" ANSI_COLOR_RESET " at '%s'\n", currentFileName, lineno, col-1, s, yytext);
   point_at_in_line(lineno-1, col - yyleng-1, col-1);
   exit(1);
 }
@@ -188,7 +188,7 @@ void point_at_in_line(int lineno, int from, int to)
   // print the line and show a caret from bottom line at position `col`
   char *line = getlineat(lineno);
   if(!line || strlen(line) == 0){
-    fprintf(stderr, "[End of file]\n");
+    fprintf(stderr, "\tError at [End of file]\n");
     return;
   }
   // Recover silently and gracefully in invalid inputs
@@ -208,7 +208,7 @@ void point_at_in_line(int lineno, int from, int to)
   }
   from = (from < 0) ? 0 : from;
   // print all characters till 'from'
-  fprintf(stderr, "%d | %.*s", lineno+1, from, line);
+  fprintf(stderr, "   %d | %.*s", lineno+1, from, line);
   // color characters enclosed in from-to with red and boldface
   fprintf(stderr, "\e[31;1m%.*s\e[0m", to - from, line + from);
   // print all characters from 'to' till end of line
@@ -226,6 +226,7 @@ void point_at_in_line(int lineno, int from, int to)
     offset++;
     lineno /= 10;
   }
+  offset+=3;
   while(offset--){
     fprintf(stderr, " ");
   }

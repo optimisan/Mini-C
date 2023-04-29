@@ -1,0 +1,1 @@
+./compiler test/$1.mini.c

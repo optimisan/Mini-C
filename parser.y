@@ -77,7 +77,7 @@ int yylex();
 %nonassoc ARR
 
 %type <node> expr arrayExpr callExpr arg_list continueStmt breakStmt returnStmt varInitialiser varNames arraySpecifier varDeclaration arrayInitialiser array_init_list param_list functionDecl declarations declaration funcBody stmtOrDecl stmt assignExpr switchStmt switchBody switchList caseLabel whileStmt blockStmt ifStmt forStmt forInit forCond forIter
-%type <iValue> varType
+%type <iValue> varType funcArraySpecifier
 /* %t declarations declaration functionDecl param_list varInitialiser varDeclaration varType varNames arraySpecifier funcBody stmtOrDecl stmt assignExpr switchStmt switchBody switches cases caseLabel caseType whileStmt blockStmt ifStmt expr arrayExpr callExpr returnStmt continueStmt breakStmt arg_list */
 
 %%
@@ -161,7 +161,7 @@ functionDecl: varType IDENTIFIER {
                     currentFunctionType = NULL;
                 }
                 ;
-funcArraySpecifier: '['']' | ;
+funcArraySpecifier: '['']' {$$=1;} | {$$=0;} ;
 param_list: varType IDENTIFIER funcArraySpecifier {
                         Symbol* psym = install($2.name, &identifiers, level, $2.src);
                         $$ = oprNode(OPR_LIST, 1, identifierNode(psym)); 
@@ -170,6 +170,11 @@ param_list: varType IDENTIFIER funcArraySpecifier {
                         paramType->type=NULL;
                         paramType->sym = psym;
                         psym->type = paramType;
+                        if($3){
+                            psym->type = newType(T_ARRAY);
+                            psym->type->type = paramType;
+                            psym->type->sym = psym;
+                        }
                         param_list_node = $$;
                     }
     | param_list ',' varType IDENTIFIER funcArraySpecifier {
@@ -182,6 +187,11 @@ param_list: varType IDENTIFIER funcArraySpecifier {
                         paramType->type=NULL;
                         paramType->sym = psym;
                         psym->type = paramType;
+                        if($5){
+                            psym->type = newType(T_ARRAY);
+                            psym->type->type = paramType;
+                            psym->type->sym = psym;
+                        }
                         $$ = oprNode(OPR_LIST, 2, $1, identifierNode(psym));
                         param_list_node = $$;
                     }
@@ -637,8 +647,11 @@ int typeCheckAssign(TypeEnum varType, TypeEnum exprType){
     if(varType == T_FUNCTION && exprType != T_FUNCTION){
         return 0;
     }
-    if(exprType == T_FLOAT && varType != T_FLOAT){
-        return 0;
+    if(varType == T_FLOAT){
+        if(exprType == T_FUNCTION || exprType == T_ARRAY){
+            return 0;
+        }
+        return 1;
     }
 
     return varType == exprType;
@@ -670,8 +683,8 @@ Symbol* getSymbol(char* name, SymbolTable* table, Coordinate src, char* format, 
 void compileError(Coordinate src, int lexemeLength, char* format, ...){
     va_list args;
     va_start(args, format);
-    fprintf(stderr, ANSI_COLOR_BOLD "%s[%d:%d] " ANSI_COLOR_RESET, currentFileName, src.line, src.col);
-    fprintf(stderr, "Error: ");
+    fprintf(stderr, ANSI_COLOR_BOLD "%s[%d:%d] ", currentFileName, src.line, src.col);
+    fprintf(stderr, ANSI_COLOR_RED "Error: " ANSI_COLOR_RESET);
     vfprintf(stderr, format, args);
     fprintf(stderr, "\n");
     point_at_in_line(src.line-1, src.col -1 , src.col + lexemeLength -1 );

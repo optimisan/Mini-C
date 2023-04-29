@@ -591,9 +591,6 @@ static Address *irVarDecl(Node *node)
   if (list->as.opr.type == OPR_LIST)
   {
     // single var assignment
-    //   Node *varInitialiser = list;
-    //   ADD_VAR_DECL();
-    // }
     for (; list->as.opr.nops == 2 && list->as.opr.type == OPR_LIST; list = list->as.opr.operands[0])
     {
       Node *varInitialiser = list->as.opr.operands[1];

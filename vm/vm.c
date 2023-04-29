@@ -273,15 +273,71 @@ void runVM()
   uintptr_t val = getAddrValue(mainReturnValue);
   printf(ANSI_COLOR_BOLD ANSI_COLOR_PINK "\n===== Execution complete! =====\n" ANSI_COLOR_RESET "Main function returned: %d\n", FROM_UINTPTR(val, int));
 }
-
+uintptr_t typeCastedValue(uintptr_t value, TypeEnum original, TypeEnum targetType)
+{
+  // uintptr_t value = getAddrValue(addr);
+  // TypeEnum original = addr->type->op;
+  uintptr_t casted;
+  if (original == T_INT && targetType == T_FLOAT)
+  {
+    int originalValue = FROM_UINTPTR(value, int);
+    float castedValue = (float)originalValue;
+    casted = TO_UINTPTR(castedValue);
+  }
+  else if (original == T_CHAR && targetType == T_FLOAT)
+  {
+    char originalValue = FROM_UINTPTR(value, char);
+    float castedValue = (float)originalValue;
+    casted = TO_UINTPTR(castedValue);
+  }
+  else if (original == T_FLOAT && targetType == T_INT)
+  {
+    float originalValue = FROM_UINTPTR(value, float);
+    int castedValue = (int)originalValue;
+    casted = TO_UINTPTR(castedValue);
+  }
+  else if (original == T_CHAR && targetType == T_INT)
+  {
+    char originalValue = FROM_UINTPTR(value, char);
+    int castedValue = (int)originalValue;
+    casted = TO_UINTPTR(castedValue);
+  }
+  else if (original == T_INT && targetType == T_CHAR)
+  {
+    int originalValue = FROM_UINTPTR(value, int);
+    char castedValue = (char)originalValue;
+    casted = TO_UINTPTR(castedValue);
+  }
+  else if (original == T_FLOAT && targetType == T_CHAR)
+  {
+    float originalValue = FROM_UINTPTR(value, float);
+    char castedValue = (char)originalValue;
+    casted = TO_UINTPTR(castedValue);
+  }
+  else
+  {
+    casted = value;
+  }
+}
 void assignStatement()
 {
   uintptr_t value = getAddrValue(currentInstruction.arg1);
-  store(currentInstruction.result->id, getAddrValue(currentInstruction.arg1));
-  currentInstruction.result->type->size = currentInstruction.arg1->type->size;
-  currentInstruction.result->type->op = currentInstruction.arg1->type->op;
-  currentInstruction.result->type->sym = currentInstruction.arg1->type->sym;
-  currentInstruction.result->type->type = currentInstruction.arg1->type->type;
+  if (currentInstruction.arg1->type->op == T_ARRAY)
+  {
+    store(currentInstruction.result->id, getAddrValue(currentInstruction.arg1));
+    currentInstruction.result->type->size = currentInstruction.arg1->type->size;
+    currentInstruction.result->type->op = currentInstruction.arg1->type->op;
+    currentInstruction.result->type->sym = currentInstruction.arg1->type->sym;
+    currentInstruction.result->type->type = currentInstruction.arg1->type->type;
+  }
+  if (currentInstruction.arg1->type->op != currentInstruction.result->type->op)
+  {
+    // printf("\t\t\ttype cast\n");
+    store(currentInstruction.result->id,
+          typeCastedValue(getAddrValue(currentInstruction.arg1),
+                          currentInstruction.arg1->type->op,
+                          currentInstruction.result->type->op));
+  }
   // printf("\t\t\tGot assign type op= %d for t%d\n", getArrayBaseType(currentInstruction.arg1->type), currentInstruction.result->id);
 }
 
@@ -297,7 +353,7 @@ void arrayIndex()
   if (offset >= arr->type->size || offset < 0)
   {
     runtimeMessage("Array index out of bounds-: " ANSI_COLOR_BOLD ANSI_COLOR_RED "(%d for size %d)\n" ANSI_COLOR_RESET, offset, arr->type->size);
-    point_at_in_line(arr->src.line, arr->src.col, arr->type->sym->src.col + 2);
+    point_at_in_line(arr->src.line + 1, arr->src.col, arr->type->sym->src.col + 2);
     exit(1);
   }
   uintptr_t value = arrBasePointer[offset];
@@ -482,7 +538,8 @@ void callFunction()
       runtimeError("Expected parameter.");
     }
     Address *result = paramIns.result;
-    store(result->id, popValue());
+    VMValue *value = pop();
+    store(result->id, typeCastedValue(value->value, value->type->op, result->type->op));
   }
   // push(currentInstruction.result);
   push(newIntAddress0(TO_UINTPTR(savedIp)));
