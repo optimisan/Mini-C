@@ -1,23 +1,34 @@
-#include <stdio.h>
-int f(float a)
+int abs(int a)
 {
-  return printf("%f\n", a);
+  if (a < 0)
+  {
+    return -a;
+  }
+  return a;
 }
 int main()
 {
-
-  switch (1)
+  int start = time();
+  int chosen = rand(0, 100);
+  printf("I have chosen a number between 0 and 100. Can you guess it?\nEnter your guess: ");
+  int guessed = scanInt();
+  int difference = abs(chosen - guessed);
+  while (guessed != chosen)
   {
-  case 4:
-  case 5:
-    return 7;
+    int newDiff = abs(chosen - guessed);
+    if (newDiff < difference)
+    {
+      printf("Warmer\n");
+    }
+    else
+    {
+      printf("Colder\n");
+    }
+    difference = newDiff;
+    printf("Enter your guess: ");
+    guessed = scanInt();
   }
-  char b[] = "f2345";
-  // asdfiboe = 45;
-  // float a = 4; // + 5.6;
-  float c = b[1];
-  float a = 24e2;
-  f(a);
-  printf("%d\n", 4.5);
-  return 4;
+  int end = time();
+  printf("You are correct!\nTime taken is %f seconds.", (end - start) / 1000.0);
+  return 0;
 }

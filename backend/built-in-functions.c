@@ -7,10 +7,18 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <sys/time.h>
+#include <regex.h>
+#include <time.h>
 
 void point_at_in_line(int lineno, int from, int to);
 void printfFunction(VMValue **params, int n);
 void secondsSinceEpoch(VMValue **params, int n);
+void regexMatch(VMValue **params, int n);
+void randomInt(VMValue **params, int n);
+void scanInt(VMValue **params, int n);
+void scanFloat(VMValue **params, int n);
+void scanChar(VMValue **params, int n);
+void scanString(VMValue **params, int n);
 
 hashmap *functionMap;
 
@@ -37,6 +45,7 @@ void installFunction(SymbolTable *table, void *nativeCode, char *name, int varia
 
 void installBuiltInFunctions(SymbolTable *table)
 {
+  srand(time(NULL));
   functionMap = hashmap_create();
 
   /*
@@ -46,10 +55,26 @@ void installBuiltInFunctions(SymbolTable *table)
   Type *formatType = newType(T_ARRAY);
   formatType->size = 1;
   formatType->type = newType(T_CHAR);
-  installFunction(table, (void *)printfFunction, "printf", 1, newType(T_INT), 1, formatType);
+  Type *intType = newType(T_INT);
+  installFunction(table, (void *)printfFunction, "printf", 1, intType, 1, formatType);
 
   // 2. time: secondsSinceEpoch
-  installFunction(table, (void *)secondsSinceEpoch, "time", 0, newType(T_INT), 0);
+  installFunction(table, (void *)secondsSinceEpoch, "time", 0, intType, 0);
+
+  // 3. regex: match a regex
+  Type *returnType = newType(T_ARRAY);
+  returnType->type = newType(T_CHAR);
+  returnType->size = 100;
+  installFunction(table, (void *)regexMatch, "regex", 0, intType, 2, formatType, formatType);
+
+  // 4. rand: random number
+  installFunction(table, (void *)randomInt, "rand", 0, intType, 2, intType, intType);
+
+  // Scan functions
+  installFunction(table, (void *)scanInt, "scanInt", 0, intType, 0);
+  installFunction(table, (void *)scanFloat, "scanFloat", 0, newType(T_FLOAT), 0);
+  installFunction(table, (void *)scanChar, "scanChar", 0, newType(T_CHAR), 0);
+  installFunction(table, (void *)scanString, "scanString", 0, returnType, 0);
   // Symbol *funcSym = install("printf", &table, S_GLOBAL - 1, (Coordinate){0, 0, 0});
   // Type *type = newType(T_FUNCTION);
   // type->variadicFunc = 1;
@@ -136,6 +161,20 @@ void printfFunction(VMValue **params, int n)
       case 0:
         RETURN_VALUE(written);
         return;
+      case 'l':
+      {
+        n--;
+        CHECK(n);
+        VMValue *param = *(params++);
+        if (param->type->op != T_INT)
+        {
+          runtimeMessage("printf called with non-int argument%d\n", param->type->op);
+          point_at_in_line(param->src.line - 1, param->src.col - 1, param->src.col + 6);
+          exit(1);
+        }
+        written += printf("%ld", FROM_UINTPTR(param->value, int));
+        break;
+      }
       case 's':
       {
         n--;
@@ -218,9 +257,120 @@ void secondsSinceEpoch(VMValue **params, int n)
   struct timeval te;
   gettimeofday(&te, NULL);                                         // get current time
   long long milliseconds = te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
-  // printf("milliseconds: %lld\n", milliseconds);
   // return milliseconds;
   int ms = (int)milliseconds;
   RETURN_VALUE(ms);
   // RETURN_VALUE(sec_microsecs);
+}
+
+char *uintToString(uintptr_t arr)
+{
+  char *str = malloc(100);
+  uintptr_t *arrBase = FROM_UINTPTR(arr, uintptr_t *);
+  while ((*arrBase) != 0)
+  {
+    char c = FROM_UINTPTR(*arrBase, char);
+    *str = c;
+    str++;
+    arrBase++;
+  }
+  *str = 0;
+  return str;
+}
+uintptr_t *stringToUintptr(char *str, int len)
+{
+  uintptr_t *arr = malloc(sizeof(uintptr_t) * (len + 1));
+  uintptr_t *arrBase = arr;
+  for (int i = 0; i < len; i++)
+  {
+    *arrBase = TO_UINTPTR(*str);
+    arrBase++;
+    str++;
+  }
+  *arrBase = 0;
+  return arr;
+}
+void regexMatch(VMValue **params, int n)
+{
+  VMValue *regexValue = params[0];
+  VMValue *str = params[1];
+  if (regexValue->type->op != T_ARRAY || str->type->op != T_ARRAY)
+  {
+    runtimeMessage("Expected string parameters for regexMatch\n");
+    exit(1);
+  }
+  char *regexStr = uintToString(regexValue->value);
+  char *strStr = uintToString(str->value);
+  regex_t regex;
+  int reti;
+  char msgbuf[100];
+
+  /* Compile regular expression */
+  reti = regcomp(&regex, regexStr, 0);
+  if (reti)
+  {
+    reti = -1;
+    RETURN_VALUE(reti);
+  }
+
+  /* Execute regular expression */
+  reti = regexec(&regex, strStr, 0, NULL, 0);
+  if (!reti)
+  {
+    puts("Match");
+    int match = 1;
+    RETURN_VALUE(match);
+  }
+  else if (reti == REG_NOMATCH)
+  {
+    int i = 0;
+    RETURN_VALUE(i);
+    puts("No match");
+  }
+  else
+  {
+    regerror(reti, &regex, msgbuf, sizeof(msgbuf));
+    // fprintf(stderr, "Regex match failed: %s\n", msgbuf);
+    reti = -2;
+    RETURN_VALUE(reti)
+  }
+
+  /* Free memory allocated to the pattern buffer by regcomp() */
+  regfree(&regex);
+}
+
+void randomInt(VMValue **params, int n)
+{
+  int max = FROM_UINTPTR(params[1]->value, int);
+  int r = (rand() % max) + FROM_UINTPTR(params[0]->value, int);
+  RETURN_VALUE(r);
+}
+
+void scanInt(VMValue **params, int n)
+{
+  int i;
+  scanf("%d", &i);
+  RETURN_VALUE(i);
+}
+void scanFloat(VMValue **params, int n)
+{
+  float i;
+  scanf("%f", &i);
+  RETURN_VALUE(i);
+}
+void scanChar(VMValue **params, int n)
+{
+  char i;
+  scanf("%c", &i);
+  RETURN_VALUE(i);
+}
+void scanString(VMValue **params, int n)
+{
+  char *i = malloc(100);
+  scanf("%[^\n]s", i);
+  uintptr_t *arr = stringToUintptr(i, strlen(i));
+  uintptr_t arrBase = TO_UINTPTR(arr);
+  char *str = uintToString(arrBase);
+  printf("\t\tstring is %s", str);
+  RETURN_VALUE(arrBase);
 }

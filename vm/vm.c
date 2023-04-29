@@ -332,12 +332,17 @@ void assignStatement()
   }
   if (currentInstruction.arg1->type->op != currentInstruction.result->type->op)
   {
-    // printf("\t\t\ttype cast\n");
+    printf("\t\t\ttype cast\n");
     store(currentInstruction.result->id,
           typeCastedValue(getAddrValue(currentInstruction.arg1),
                           currentInstruction.arg1->type->op,
                           currentInstruction.result->type->op));
   }
+  else
+  {
+    store(currentInstruction.result->id, getAddrValue(currentInstruction.arg1));
+  }
+  // printf("\t\tAssigned value=%d\n", getAddrIntValue(currentInstruction.arg1));
   // printf("\t\t\tGot assign type op= %d for t%d\n", getArrayBaseType(currentInstruction.arg1->type), currentInstruction.result->id);
 }
 
