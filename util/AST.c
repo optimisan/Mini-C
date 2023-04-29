@@ -208,14 +208,20 @@ void freeFunctionAST(Node *node)
     // printf("Freed body for function\n");
   }
 }
-
-void printNode(Node *node)
+void printNodeWithOffset(Node *node, int offset)
 {
+#define PRINT_OFFSET()             \
+  for (int i = 0; i < offset; i++) \
+  {                                \
+    printf("    ");                \
+  }
+  PRINT_OFFSET();
   if (!node)
   {
-    printf("null");
+    printf("null\n");
     return;
   }
+
   switch (node->type)
   {
   case NODE_LITERAL:
@@ -284,18 +290,28 @@ void printNode(Node *node)
       printf("%c", node->as.opr.type);
       break;
     }
-    printf("(");
+    // PRINT_OFFSET();
+
+    printf("(\n");
     for (int i = 0; i < node->as.opr.nops; i++)
     {
-      printNode(node->as.opr.operands[i]);
+      printNodeWithOffset(node->as.opr.operands[i], offset + 1);
       if (i < node->as.opr.nops - 1)
       {
-        printf(", ");
+        // printf("\n");
       }
     }
+    PRINT_OFFSET();
+
     printf(")");
     break;
   default:
     break;
   }
+  printf("\n");
+}
+
+void printNode(Node *node)
+{
+  printNodeWithOffset(node, 0);
 }

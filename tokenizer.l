@@ -90,10 +90,10 @@ nonzero [1-9]
 
   /* Integers */
 0 {yylval.iValue = 0; return INTEGER;}
-{nonzero}({digit})* {yylval.iValue = atoi(yytext); return INTEGER;}
+{nonzero}({digit})*([eE][-+]?[0-9]+)? {yylval.iValue = (int)round(atof(yytext)); return INTEGER;}
 
   /* Floats */
-{nonzero}({digit})*"."({digit})* {yylval.fValue = atof(yytext); return FLOAT;}
+{nonzero}({digit})*"."({digit})*([eE][-+]?[0-9]+)? {yylval.fValue = atof(yytext); return FLOAT;}
 
   /* Characters */
 "\'"({alpha}|{digit})"\'" {yylval.cValue = yytext[1]; return CHARACTER;}
@@ -136,26 +136,10 @@ nonzero [1-9]
 . {yyerror("Error: Invalid character"); return ERROR;}
 
 %%
-// int main(int argc, char *argv[])
-// {
-//     if(argc != 2){
-//         fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
-//         return 1;
-//     }
-//     yyin = fopen(argv[1], "r");
-
-//     int token;
-//     while((token=yylex()) != EOF_TOKEN){
-//         printf("%d: %s\n", token, yytext);
-//     }
-//     return 0;
-// }
 int yywrap(){
   yyterminate();
   return EOF_TOKEN;
 }
-
-
 
 int yyerror(char *s){
   fprintf(stderr, ANSI_COLOR_BOLD "%s[%d:%d] "ANSI_COLOR_RED "%s" ANSI_COLOR_RESET " at '%s'\n", currentFileName, lineno, col-1, s, yytext);
@@ -226,6 +210,7 @@ void point_at_in_line(int lineno, int from, int to)
     offset++;
     lineno /= 10;
   }
+  //add the left padding
   offset+=3;
   while(offset--){
     fprintf(stderr, " ");
@@ -236,7 +221,9 @@ void point_at_in_line(int lineno, int from, int to)
   {
     fprintf(stderr, " ");
   }
+  //place the caret
   fprintf(stderr, "\e[32;1m" ANSI_COLOR_RED "^");
+  //underline the rest of the characters
   for(int i=from; i < to-1; i++){
     fprintf(stderr, "~");
   }

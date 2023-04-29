@@ -528,7 +528,8 @@ callExpr: IDENTIFIER '(' arg_list ')' {
                         }
                         if(i>=0){
                         // printf("Comparing with original type %d \n", /* param->exprType.op, */ callee->type->proto[i]->op);
-                        printf("inside %d\n", callee->type->proto[i] == NULL);}
+                        // printf("inside %d\n", callee->type->proto[i] == NULL);
+                        }
                         if(i<0 && !callee->type->variadicFunc) {
                                 compileError($1.src, strlen($1.name), "Too many parameters in function call to '%s'", $1.name);
                         }

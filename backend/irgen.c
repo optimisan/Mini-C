@@ -281,7 +281,7 @@ static Address *indexArrayWithOpAs(Node *node, InstType opType, Address *result)
     result = newTempAddress(sym->type);
     result->type->size = getArraySize(sym->type);
     result->type->op = getArrayBaseType(sym->type);
-    printf("Setting base type =%d\n", result->type->op);
+    // printf("Setting base type =%d\n", result->type->op);
   }
   // addInstruction(ir, newInstruction('*', newIntAddress(getHostSize(getArrayBaseType(sym->type)), node->src), offset, offset));
   addInstruction(ir, newInstruction(opType, base, offset, result));
@@ -325,7 +325,7 @@ static Address *stringAddress(Value *value, Coordinate src)
   type->type = newType(T_CHAR);
   Address *temp = newTempAddress(type);
   // value->type = type;
-  printf("Adding string address for %s, size=%d\n", "", value->type);
+  // printf("Adding string address for %s, size=%d\n", "", value->type);
   int eleSize = getHostSize(T_CHAR);
   addInstruction(ir, newInstruction(OP_ARRAY_DECL, newIntAddress(value->size + 1, src), newIntAddress(eleSize, src), temp));
   for (int i = 0; i < value->size; i++)

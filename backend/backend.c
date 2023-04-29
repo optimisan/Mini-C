@@ -13,7 +13,7 @@ void backend(Node *astRootNode, char *sourceFileName)
   IR *ir = generateIR(astRootNode, sourceFileName);
   printf("Writing IR... ");
   writeIRtoFile(ir);
-  printf("See %s for the IR\n" ANSI_COLOR_BOLD ANSI_COLOR_GREEN "====== Executing IR... ======\n" ANSI_COLOR_RESET, sourceFileName);
+  printf("See %s.ir for the IR\n" ANSI_COLOR_BOLD ANSI_COLOR_GREEN "====== Executing IR... ======\n" ANSI_COLOR_RESET, sourceFileName);
   initVM(ir);
   runVM();
 }
