@@ -183,8 +183,8 @@ void printfFunction(VMValue **params, int n)
         if (stringValue->type->op != T_ARRAY)
         {
           runtimeMessage("printf called with non-string argument\n");
-          point_at_in_line(stringValue->src.line - 1, stringValue->src.col - 1, stringValue->src.col + 6);
-          exit(1);
+          // point_at_in_line(stringValue->src.line - 1, stringValue->src.col - 1, stringValue->src.col + 6);
+          // exit(1);
         }
         written += printValueString(stringValue->value);
         break;
