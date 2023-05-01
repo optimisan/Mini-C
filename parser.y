@@ -545,7 +545,6 @@ callExpr: IDENTIFIER '(' arg_list ')' {
                 $$ = oprNode(OPR_CALL, 2, identifierNode(callee), $3);
                 $$->exprType.op = callee->type->type->op;
                 // printNode($$);
-                printf("\n");
     }
 
 arg_list: expr {$$ = $1;/* oprNode(OPR_LIST, 1,$1); */}
@@ -665,8 +664,8 @@ Symbol* getSymbol(char* name, SymbolTable* table, Coordinate src, char* format, 
     if(!foundIdentifier){
         va_list args;
         va_start(args, format);
-        fprintf(stderr, ANSI_COLOR_BOLD "%s[%d:%d] " ANSI_COLOR_RESET, currentFileName, src.line, src.col);
-        fprintf(stderr, "Error: ");
+        fprintf(stderr, ANSI_COLOR_BOLD "%s[%d:%d] ", currentFileName, src.line, src.col);
+        fprintf(stderr, "Error: " ANSI_COLOR_RESET);
         vfprintf(stderr, format, args);
         fprintf(stderr, "\n");
         point_at_in_line(src.line-1, src.col -1 , src.col + strlen(name) -1 );

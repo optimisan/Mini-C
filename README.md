@@ -111,11 +111,15 @@ Boring, I know.
 
 `time()` returns current milliseconds since epoch.
 
+`exit(int status)` exits the program with return value as `status`.
+
 `rand(int min, int max)` returns a random number between `[min, max)`.
 
 `scanInt()` reads an integer from stdin and returns its value.
 
 `scanChar()` and `scanFloat()` can be used similarly.
+
+`char[] scanString()` returns a string delimited by a newline from `stdin`.
 
 ## Running
 

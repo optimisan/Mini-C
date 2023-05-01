@@ -19,6 +19,10 @@ void scanInt(VMValue **params, int n);
 void scanFloat(VMValue **params, int n);
 void scanChar(VMValue **params, int n);
 void scanString(VMValue **params, int n);
+void exitFunction(VMValue **params, int n);
+
+extern Address *mainReturnValue;
+extern VM vm;
 
 hashmap *functionMap;
 
@@ -40,7 +44,7 @@ void installFunction(SymbolTable *table, void *nativeCode, char *name, int varia
   }
   va_end(args);
   funcSymbol->type = type;
-  hashmap_set(functionMap, name, strlen(name), nativeCode);
+  hashmap_set(functionMap, name, strlen(name), TO_UINTPTR(nativeCode));
 }
 
 void installBuiltInFunctions(SymbolTable *table)
@@ -70,6 +74,9 @@ void installBuiltInFunctions(SymbolTable *table)
   // 4. rand: random number
   installFunction(table, (void *)randomInt, "rand", 0, intType, 2, intType, intType);
 
+  // 5. exit: exit the program
+  installFunction(table, (void *)exitFunction, "exit", 0, intType, 1, intType);
+
   // Scan functions
   installFunction(table, (void *)scanInt, "scanInt", 0, intType, 0);
   installFunction(table, (void *)scanFloat, "scanFloat", 0, newType(T_FLOAT), 0);
@@ -89,6 +96,20 @@ void installBuiltInFunctions(SymbolTable *table)
   // hashmap_set(functionMap, "printf", strlen("printf"), (void *)printfFunction);
   // printf("printf type is %d\n", funcSym->type->op);
 }
+
+void exitFunction(VMValue **params, int n)
+{
+  store(mainReturnValue->id, params[0]->value);
+  VMValue *mainReturnIp;
+  VMValue *v = vm.stack;
+  while (v)
+  {
+    mainReturnIp = v;
+    v = v->next;
+  }
+  vm.ip = FROM_UINTPTR(mainReturnIp->value, int);
+}
+
 #define RETURN_VALUE(val) store(callInstruction.result->id, TO_UINTPTR(val));
 
 #define GET_STACK_PARAMS(n, arr) \
@@ -172,7 +193,7 @@ void printfFunction(VMValue **params, int n)
           point_at_in_line(param->src.line - 1, param->src.col - 1, param->src.col + 6);
           exit(1);
         }
-        written += printf("%ld", FROM_UINTPTR(param->value, int));
+        written += printf("%ld", FROM_UINTPTR(param->value, long int));
         break;
       }
       case 's':
@@ -265,7 +286,8 @@ void secondsSinceEpoch(VMValue **params, int n)
 
 char *uintToString(uintptr_t arr)
 {
-  char *str = malloc(100);
+  char *str = malloc(sizeof(char) * 100);
+  char *strbase = str;
   uintptr_t *arrBase = FROM_UINTPTR(arr, uintptr_t *);
   while ((*arrBase) != 0)
   {
@@ -274,8 +296,8 @@ char *uintToString(uintptr_t arr)
     str++;
     arrBase++;
   }
-  *str = 0;
-  return str;
+  *str = '\0';
+  return strbase;
 }
 uintptr_t *stringToUintptr(char *str, int len)
 {
@@ -290,6 +312,23 @@ uintptr_t *stringToUintptr(char *str, int len)
   *arrBase = 0;
   return arr;
 }
+int match(const char *string, char *pattern)
+{
+  int status;
+  regex_t re;
+
+  if (regcomp(&re, pattern, REG_EXTENDED | REG_NOSUB) != 0)
+  {
+    return (0); /* Report error. */
+  }
+  status = regexec(&re, string, (size_t)0, NULL, 0);
+  regfree(&re);
+  if (status != 0)
+  {
+    return (0); /* Report error. */
+  }
+  return (1);
+}
 void regexMatch(VMValue **params, int n)
 {
   VMValue *regexValue = params[0];
@@ -301,42 +340,8 @@ void regexMatch(VMValue **params, int n)
   }
   char *regexStr = uintToString(regexValue->value);
   char *strStr = uintToString(str->value);
-  regex_t regex;
-  int reti;
-  char msgbuf[100];
-
-  /* Compile regular expression */
-  reti = regcomp(&regex, regexStr, 0);
-  if (reti)
-  {
-    reti = -1;
-    RETURN_VALUE(reti);
-  }
-
-  /* Execute regular expression */
-  reti = regexec(&regex, strStr, 0, NULL, 0);
-  if (!reti)
-  {
-    puts("Match");
-    int match = 1;
-    RETURN_VALUE(match);
-  }
-  else if (reti == REG_NOMATCH)
-  {
-    int i = 0;
-    RETURN_VALUE(i);
-    puts("No match");
-  }
-  else
-  {
-    regerror(reti, &regex, msgbuf, sizeof(msgbuf));
-    // fprintf(stderr, "Regex match failed: %s\n", msgbuf);
-    reti = -2;
-    RETURN_VALUE(reti)
-  }
-
-  /* Free memory allocated to the pattern buffer by regcomp() */
-  regfree(&regex);
+  int matchResult = match(strStr, regexStr);
+  RETURN_VALUE(matchResult);
 }
 
 void randomInt(VMValue **params, int n)
@@ -371,6 +376,5 @@ void scanString(VMValue **params, int n)
   uintptr_t *arr = stringToUintptr(i, strlen(i));
   uintptr_t arrBase = TO_UINTPTR(arr);
   char *str = uintToString(arrBase);
-  printf("\t\tstring is %s", str);
   RETURN_VALUE(arrBase);
 }

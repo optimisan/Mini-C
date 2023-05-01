@@ -755,8 +755,8 @@ static const yytype_int16 yyrline[] =
      421,   422,   423,   424,   425,   436,   436,   445,   445,   447,
      449,   449,   455,   456,   458,   459,   460,   464,   465,   466,
      467,   468,   469,   470,   471,   472,   473,   474,   475,   476,
-     477,   478,   479,   480,   481,   482,   483,   488,   503,   551,
-     552,   553,   556,   563,   571,   573
+     477,   478,   479,   480,   481,   482,   483,   488,   503,   550,
+     551,   552,   555,   562,   570,   572
 };
 #endif
 
@@ -2287,31 +2287,30 @@ yyreduce:
                 (yyval.node) = oprNode(OPR_CALL, 2, identifierNode(callee), (yyvsp[-1].node));
                 (yyval.node)->exprType.op = callee->type->type->op;
                 // printNode($$);
-                printf("\n");
     }
-#line 2293 "y.tab.c"
+#line 2292 "y.tab.c"
     break;
 
   case 109: /* arg_list: expr  */
-#line 551 "parser.y"
+#line 550 "parser.y"
                {(yyval.node) = (yyvsp[0].node);/* oprNode(OPR_LIST, 1,$1); */}
-#line 2299 "y.tab.c"
+#line 2298 "y.tab.c"
     break;
 
   case 110: /* arg_list: arg_list ',' expr  */
-#line 552 "parser.y"
+#line 551 "parser.y"
                         {(yyval.node) = oprNode(OPR_LIST, 2, (yyvsp[-2].node), (yyvsp[0].node));}
-#line 2305 "y.tab.c"
+#line 2304 "y.tab.c"
     break;
 
   case 111: /* arg_list: %empty  */
-#line 553 "parser.y"
+#line 552 "parser.y"
       {(yyval.node) = NULL;}
-#line 2311 "y.tab.c"
+#line 2310 "y.tab.c"
     break;
 
   case 112: /* returnStmt: RETURN  */
-#line 556 "parser.y"
+#line 555 "parser.y"
                    {
                 Coordinate src;
                 src.line = lineno;
@@ -2319,34 +2318,34 @@ yyreduce:
                 compileError(src, 0, "Expected an expression to return");
                 (yyval.node) = oprNode(OPR_RETURN, 0);
             }
-#line 2323 "y.tab.c"
+#line 2322 "y.tab.c"
     break;
 
   case 113: /* returnStmt: RETURN expr  */
-#line 563 "parser.y"
+#line 562 "parser.y"
                       {
             if(!typeCheckAssign(currentFunctionType->type->op, (yyvsp[0].node)->exprType.op)){
                 compileError((yyvsp[0].node)->src, (yyvsp[0].node)->src.length, "Type mismatch in return statement");
             }
             (yyval.node) = oprNode(OPR_RETURN, 1, (yyvsp[0].node));
         }
-#line 2334 "y.tab.c"
+#line 2333 "y.tab.c"
     break;
 
   case 114: /* continueStmt: CONTINUE  */
-#line 571 "parser.y"
+#line 570 "parser.y"
                        {(yyval.node) = oprNode(OPR_CONTINUE, 0);}
-#line 2340 "y.tab.c"
+#line 2339 "y.tab.c"
     break;
 
   case 115: /* breakStmt: BREAK  */
-#line 573 "parser.y"
+#line 572 "parser.y"
                  {(yyval.node) = oprNode(OPR_BREAK, 0);}
-#line 2346 "y.tab.c"
+#line 2345 "y.tab.c"
     break;
 
 
-#line 2350 "y.tab.c"
+#line 2349 "y.tab.c"
 
       default: break;
     }
@@ -2539,7 +2538,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 575 "parser.y"
+#line 574 "parser.y"
 
 void typeCheckArrayInitialiser(Type* elementType, Node* expr){
     Node* exprList = expr;
@@ -2633,8 +2632,8 @@ Symbol* getSymbol(char* name, SymbolTable* table, Coordinate src, char* format, 
     if(!foundIdentifier){
         va_list args;
         va_start(args, format);
-        fprintf(stderr, ANSI_COLOR_BOLD "%s[%d:%d] " ANSI_COLOR_RESET, currentFileName, src.line, src.col);
-        fprintf(stderr, "Error: ");
+        fprintf(stderr, ANSI_COLOR_BOLD "%s[%d:%d] ", currentFileName, src.line, src.col);
+        fprintf(stderr, "Error: " ANSI_COLOR_RESET);
         vfprintf(stderr, format, args);
         fprintf(stderr, "\n");
         point_at_in_line(src.line-1, src.col -1 , src.col + strlen(name) -1 );

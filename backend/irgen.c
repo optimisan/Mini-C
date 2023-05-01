@@ -534,11 +534,16 @@ static void arrayDeclaration(IR *localIR, Node *varInitialiser)
       // addInstruction(localIR, newInstruction(OP_ARRAY_DECL, newIntAddress0(initExprAddr->type->size), newIntAddress0(elementSize), arrAddress));
       return;
     }
-    addInstruction(localIR,
-                   newInstruction(OP_ARRAY_ASSIGN,
-                                  arrAddress,
-                                  newIntAddress0(0),
-                                  initExprAddr));
+    if (initExpr->type == NODE_OPR && initExpr->as.opr.type != OPR_LIST)
+    {
+      addInstruction(localIR, newInstruction(OP_ASSIGN, initExprAddr, NULL, arrAddress));
+      return;
+    }
+    // addInstruction(localIR,
+    //                newInstruction(OP_ARRAY_ASSIGN,
+    //                               arrAddress,
+    //                               newIntAddress0(0),
+    //                               initExprAddr));
     addInstruction(localIR,
                    newInstruction(OP_ARRAY_DECL,
                                   newIntAddress0(arraySize),

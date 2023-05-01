@@ -1,3 +1,4 @@
+#include "../util/options.h"
 #include "backend.h"
 #include "irgen.h"
 #include "ir.h"
@@ -7,13 +8,24 @@
 
 void backend(Node *astRootNode, char *sourceFileName)
 {
-  printf(ANSI_COLOR_BOLD ANSI_COLOR_CYAN "Parsed successfully\n======== AST ========\n" ANSI_COLOR_RESET);
-  printNode(astRootNode);
-  printf(ANSI_COLOR_BOLD ANSI_COLOR_BLUE "\n====== Generating IR ======\n" ANSI_COLOR_RESET);
+  if (dumpAST)
+  {
+    printf(ANSI_COLOR_BOLD ANSI_COLOR_CYAN "Parsed successfully\n======== AST ========\n" ANSI_COLOR_RESET);
+    printNode(astRootNode);
+  }
   IR *ir = generateIR(astRootNode, sourceFileName);
-  printf("Writing IR... ");
-  writeIRtoFile(ir);
-  printf("See %s.ir for the IR\n" ANSI_COLOR_BOLD ANSI_COLOR_GREEN "====== Executing IR... ======\n" ANSI_COLOR_RESET, sourceFileName);
+  if (!dumpIR)
+  {
+    printf(ANSI_COLOR_BOLD ANSI_COLOR_BLUE "\n====== Generating IR ======\n" ANSI_COLOR_RESET);
+    printf("Writing IR... ");
+    writeIRtoFile(ir);
+    printf("See %s.ir for the IR\n", sourceFileName);
+  }
+  else
+  {
+    printIR(ir, stdout);
+  }
+  printf(ANSI_COLOR_BOLD ANSI_COLOR_GREEN "====== Executing IR... ======\n" ANSI_COLOR_RESET);
   initVM(ir);
   runVM();
 }

@@ -38,7 +38,6 @@ uintptr_t load(int reg)
   int a = reg;
   int key[] = {a};
   int found = hashmap_get(registers, hashmap_static_arr(key), &value);
-  printf("\t\t\t\tloading %d=%d, found=%d\n", reg, value, found);
   return value;
 }
 
@@ -477,6 +476,9 @@ uintptr_t getMathResult()
     break;
   case '!':
     val = !v1;
+    break;
+  case '%':
+    val = v1 % v2;
     break;
   default:
     MATH_OPERATIONS(op);

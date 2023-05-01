@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "./util/options.h"
 #include "./util/token.h"
 #include "./util/AST.h"
 #include "./util/symbol.h"
@@ -31,21 +32,22 @@ void testTokenizer()
 
 int main(int argc, char *argv[])
 {
-  if (argc != 2)
-  {
-    fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
-    return 1;
-  }
-  yyin = fopen(argv[1], "r");
+  char *filename = parseOptions(argc, argv);
+  // if (argc != 2)
+  // {
+  //   fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
+  //   return 1;
+  // }
+  yyin = fopen(filename, "r");
   if (!yyin)
   {
-    fprintf(stderr, "Failed to open file %s\n", argv[1]);
+    fprintf(stderr, "Failed to open file %s\n", filename);
     return 1;
   }
-  currentFileName = argv[1];
-
-  testTokenizer();
-  yyin = fopen(argv[1], "r");
+  currentFileName = filename;
+  if (dumpTokens)
+    testTokenizer();
+  yyin = fopen(filename, "r");
   lineno = 1;
   // return 0;
   // printf("Starting parser\n");
