@@ -76,7 +76,12 @@ char *parseOptions(int argc, char **argv)
     return argv[optind];
   else
   {
-    puts("Exactly one input file must be specified.");
+    printf("Usage: %s [options] <filename>\n", argv[0]);
+    printf("Options:\n");
+    printf("  -h, --help\t\tPrint this help message\n");
+    printf("  --dump-ir\t\tDump IR\n");
+    printf("  --dump-ast\t\tDump AST\n");
+    printf("  --dump-tokens\t\tDump tokens\n");
     exit(1);
   }
   // putchar('\n');
