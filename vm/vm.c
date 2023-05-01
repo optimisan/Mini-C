@@ -328,10 +328,11 @@ void assignStatement()
     currentInstruction.result->type->op = currentInstruction.arg1->type->op;
     currentInstruction.result->type->sym = currentInstruction.arg1->type->sym;
     currentInstruction.result->type->type = currentInstruction.arg1->type->type;
+    // printf("\t\tgot size as %d\n", currentInstruction.result->type->size);
   }
   if (currentInstruction.arg1->type->op != currentInstruction.result->type->op)
   {
-    printf("\t\t\ttype cast\n");
+    // printf("\t\t\ttype cast\n");
     store(currentInstruction.result->id,
           typeCastedValue(getAddrValue(currentInstruction.arg1),
                           currentInstruction.arg1->type->op,
@@ -547,6 +548,17 @@ void callFunction()
     Address *result = paramIns.result;
     VMValue *value = pop();
     store(result->id, typeCastedValue(value->value, value->type->op, result->type->op));
+    if (value->type->op == T_ARRAY)
+    {
+      result->type->op = value->type->op;
+      result->type->size = value->type->size;
+      result->type->sym = value->type->sym;
+      result->type->type = value->type->type;
+    }
+    // currentInstruction.result->type->size = currentInstruction.arg1->type->size;
+    // currentInstruction.result->type->op = currentInstruction.arg1->type->op;
+    // currentInstruction.result->type->sym = currentInstruction.arg1->type->sym;
+    // currentInstruction.result->type->type = currentInstruction.arg1->type->type;
   }
   // push(currentInstruction.result);
   push(newIntAddress0(TO_UINTPTR(savedIp)));
