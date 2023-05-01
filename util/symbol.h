@@ -64,19 +64,32 @@ typedef struct Type
   struct Type *type;
 } Type;
 
+/**
+ * @brief Symbol table entry
+ */
 typedef struct Symbol
 {
+  // The name of symbol Ex. arr, sqrt
   char *name;
+  // The scope of the symbol
   Scope scope;
+  // The Coordinate of the symbol
+  // Used for error reporting
   Coordinate src;
   struct Symbol *up;
+  // Type of variable or function
   Type *type;
 } Symbol;
 
+/**
+ *
+ *
+ */
 typedef struct SymbolTable
 {
-  int level;
+  int level; // 1 for function, 2 for a block inside function
   struct SymbolTable *enclosing;
+  // Map string->Symbol*
   hashmap *map;
   Symbol *all;
 } SymbolTable;

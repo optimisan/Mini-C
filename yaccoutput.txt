@@ -1,0 +1,51 @@
+ First example: declarations varType IDENTIFIER $@1 '(' param_list ')' $@2 '{' @3 stmtOrDecl SWITCH $@5 '(' expr ')' $@6 '{' varType IDENTIFIER arraySpecifier '=' IDENTIFIER • '(' arg_list ')' stmt '}' '}' EOF_TOKEN $end
+  Shift derivation
+    $accept
+    ↳ 0: program                                                                                                                                                                                                                                                                                        $end
+         ↳ 1: declarations                                                                                                                                                                                                                                                                    EOF_TOKEN
+              ↳ 2: declarations declaration
+                                ↳ 4: functionDecl
+                                     ↳ 9: varType IDENTIFIER $@1 '(' param_list ')' $@2 funcBody
+                                                                                        ↳ 33: '{' @3 stmtOrDecl                                                                                                                                                                           '}'
+                                                                                                     ↳ 34: stmtOrDecl stmt
+                                                                                                                      ↳ 44: switchStmt
+                                                                                                                            ↳ 65: SWITCH $@5 '(' expr ')' $@6 '{' switchBody                                                                                                          '}'
+                                                                                                                                                                  ↳ 66: switchList
+                                                                                                                                                                        ↳ 72: switchList                                                                                         stmt
+                                                                                                                                                                              ↳ 69: varDeclaration
+                                                                                                                                                                                    ↳ 23: varType varInitialiser
+                                                                                                                                                                                                  ↳ 16: IDENTIFIER arraySpecifier '=' expr
+  int arr[] = f(A)[1];
+
+          int arr[] = f                                                                                                                                                                                                                             ↳ 88: callExpr
+          (A)[1];                                                                                                                                                                                                                             ↳ 107: IDENTIFIER • '(' arg_list ')'
+  Second example: declarations varType IDENTIFIER $@1 '(' param_list ')' $@2 '{' @3 stmtOrDecl SWITCH $@5 '(' expr ')' $@6 '{' varType IDENTIFIER arraySpecifier '=' IDENTIFIER • '(' expr ')' '[' expr ']' '=' expr ';' '}' '}' EOF_TOKEN $end
+  Reduce derivation
+    $accept
+    ↳ 0: program                                                                                                                                                                                                                                                                                                                                  $end
+         ↳ 1: declarations                                                                                                                                                                                                                                                                                                              EOF_TOKEN
+              ↳ 2: declarations declaration
+                                ↳ 4: functionDecl
+                                     ↳ 9: varType IDENTIFIER $@1 '(' param_list ')' $@2 funcBody
+                                                                                        ↳ 33: '{' @3 stmtOrDecl                                                                                                                                                                                                                     '}'
+                                                                                                     ↳ 34: stmtOrDecl stmt
+                                                                                                                      ↳ 44: switchStmt
+                                                                                                                            ↳ 65: SWITCH $@5 '(' expr ')' $@6 '{' switchBody                                                                                                                                                    '}'
+                                                                                                                                                                  ↳ 66: switchList
+                                                                                                                                                                        ↳ 72: switchList                                                                       stmt
+                                                                                                                                                                              ↳ 69: varDeclaration                                                             ↳ 39: assignExpr                                             ';'
+                                                                                                                                                                                    ↳ 23: varType varNames                                                           ↳ 60: arrayExpr                               '=' expr
+                                                                                                                                                                                                  ↳ 27: varInitialiser                                                     ↳ 106: expr                '[' expr ']'
+                                                                                                                                                                                                        ↳ 16: IDENTIFIER arraySpecifier '=' expr                                  ↳ 104: '(' expr ')'
+                                                                                                                                                                                                                                            ↳ 85: IDENTIFIER •
+parser.y: warning: shift/reduce conflict on token '-' [-Wcounterexamples]
+Productions leading up to the conflict state found.  Still finding a possible unifying counterexample...time limit exceeded: 6.000000
+  First example: stmt
+  Shift derivation
+    switchList
+    ↳ 72: stmt
+  Second example: expr ';'
+  Reduce derivation
+    switchList
+    ↳ 72: expr stmt
+               ↳ 39: ';'

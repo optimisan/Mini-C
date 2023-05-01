@@ -31,6 +31,7 @@
 //   printf("\n%f", b - a);
 //   return 0;
 // }
+/*multi //*/ //*/
 int factorial(int n)
 {
   int a = 1;

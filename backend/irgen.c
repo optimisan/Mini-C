@@ -412,23 +412,23 @@ static Address *irSymbol(Node *node)
 {
   return symbolAddress(node->as.symbol, ir);
 }
-static int readArrayInitialiser(IR *localIR, Node *arrList, Address *arrAddress, int elementSize)
+static int readArrayInitialiser(IR *localIR, Node *arrList, Address *arrAddress, int elementSize, int startingIndex)
 {
-#define ADD_ELEMENT()                                                                           \
-  if (arrElement->type == NODE_OPR && arrElement->as.opr.type == OPR_LIST)                      \
-  {                                                                                             \
-    numberOfElementsInit += readArrayInitialiser(localIR, arrElement, arrAddress, elementSize); \
-  }                                                                                             \
-  else                                                                                          \
-  {                                                                                             \
-    Address *initExprAddr = irNode(arrElement);                                                 \
-    addInstruction(localIR,                                                                     \
-                   newInstruction(OP_ARRAY_ASSIGN,                                              \
-                                  arrAddress,                                                   \
-                                  newIntAddress(numberOfElementsInit,                           \
-                                                /*  *elementSize, */ arrElement->src),          \
-                                  initExprAddr));                                               \
-    numberOfElementsInit++;                                                                     \
+#define ADD_ELEMENT()                                                                                                 \
+  if (arrElement->type == NODE_OPR && arrElement->as.opr.type == OPR_LIST)                                            \
+  {                                                                                                                   \
+    numberOfElementsInit += readArrayInitialiser(localIR, arrElement, arrAddress, elementSize, numberOfElementsInit); \
+  }                                                                                                                   \
+  else                                                                                                                \
+  {                                                                                                                   \
+    Address *initExprAddr = irNode(arrElement);                                                                       \
+    addInstruction(localIR,                                                                                           \
+                   newInstruction(OP_ARRAY_ASSIGN,                                                                    \
+                                  arrAddress,                                                                         \
+                                  newIntAddress(numberOfElementsInit + startingIndex,                                 \
+                                                /*  *elementSize, */ arrElement->src),                                \
+                                  initExprAddr));                                                                     \
+    numberOfElementsInit++;                                                                                           \
   }
 
   int numberOfElementsInit = 0;
@@ -503,7 +503,7 @@ static void arrayDeclaration(IR *localIR, Node *varInitialiser)
   int ndim = 0;
   if (initExpr && initExpr->type == NODE_OPR && initExpr->as.opr.type == OPR_LIST)
   {
-    int numberOfElementsInit = readArrayInitialiser(localIR, varInitialiser->as.opr.operands[2], arrAddress, elementSize);
+    int numberOfElementsInit = readArrayInitialiser(localIR, varInitialiser->as.opr.operands[2], arrAddress, elementSize, 0);
     if (arraySize == 0 && numberOfElementsInit == 0)
     {
       compileError(varInitialiser->src, strlen(arrSymbol->name), "Array ('%s') size cannot be zero", arrSymbol->name);
@@ -539,11 +539,12 @@ static void arrayDeclaration(IR *localIR, Node *varInitialiser)
       addInstruction(localIR, newInstruction(OP_ASSIGN, initExprAddr, NULL, arrAddress));
       return;
     }
-    // addInstruction(localIR,
-    //                newInstruction(OP_ARRAY_ASSIGN,
-    //                               arrAddress,
-    //                               newIntAddress0(0),
-    //                               initExprAddr));
+    if (initExpr->type != NODE_OPR || (initExpr->type == NODE_OPR && initExpr->as.opr.type != OPR_LIST))
+      addInstruction(localIR,
+                     newInstruction(OP_ARRAY_ASSIGN,
+                                    arrAddress,
+                                    newIntAddress0(0),
+                                    initExprAddr));
     addInstruction(localIR,
                    newInstruction(OP_ARRAY_DECL,
                                   newIntAddress0(arraySize),
