@@ -589,7 +589,7 @@ void typeCheckArrayInitialiser(Type* elementType, Node* expr){
         if(elementType->type == NULL){
             compileError( insideElement->src,  insideElement->src.length, "Invalid array element type");
         }
-        printf("Checking 1) %d %d\n", elementType->type->op, insideElement->exprType.op);
+        /* printf("Checking 1) %d %d\n", elementType->type->op, insideElement->exprType.op); */
         if(!typeCheckAssign(elementType->type->op, insideElement->exprType.op) && !typeCheckAssign(baseType, insideElement->exprType.op)){
             compileError( insideElement->src,  insideElement->src.length, "Invalid array element type %d %d", elementType->type->op, insideElement->exprType.op);
         }
@@ -605,7 +605,7 @@ void typeCheckArrayInitialiser(Type* elementType, Node* expr){
             typeCheckArrayInitialiser(elementType->type, exprList->as.opr.operands[1]);
         }
         TypeEnum baseType = getArrayBaseType(elementType);
-        printf("Checking 2) %d %d\n", baseType, localElement->exprType.op);
+        /* printf("Checking 2) %d %d\n", baseType, localElement->exprType.op); */
         if(localElement->exprType.op != baseType && localElement->exprType.op != elementType->type->op){
             compileError(localElement->src, localElement->src.length, "Invalid array element type 2");
         }

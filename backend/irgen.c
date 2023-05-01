@@ -149,12 +149,14 @@ static Address *irFor(Node *node)
 {
   Address *startLabel = newLabelAddress();
   Address *endLabel = newLabelAddress();
-  newControlBlock(startLabel, endLabel);
+  Address *continueLabel = newLabelAddress();
+  newControlBlock(continueLabel, endLabel);
   irNode(node->as.opr.operands[0]);
   addInstruction(ir, newInstruction(OP_LABEL, NULL, NULL, startLabel));
   Address *condition = irNode(node->as.opr.operands[1]);
   addInstruction(ir, newInstruction(OP_IF_FALSE_GOTO, condition, NULL, endLabel));
   irNode(node->as.opr.operands[3]);
+  addInstruction(ir, newInstruction(OP_LABEL, NULL, NULL, continueLabel));
   irNode(node->as.opr.operands[2]);
   addInstruction(ir, newInstruction(OP_GOTO, NULL, NULL, startLabel));
   addInstruction(ir, newInstruction(OP_LABEL, NULL, NULL, endLabel));

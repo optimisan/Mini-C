@@ -1,10 +1,13 @@
 float main()
 {
-  // float h = 4, k = 2;
-  // h = k + 4.2;
-  // // int a = 3.4;
-  // printf("h is actually %f\n", h);
-  // return h;
-  int arr[][3] = {{3, 4}, {5, 6}};
-  return arr[1][0];
+  char str[1] = "af";
+  int a = 20;
+  int arr[20];
+  while (a > 10)
+  {
+    a = a - 1;
+    printf("asd");
+    break;
+  }
+  return arr[14];
 }
