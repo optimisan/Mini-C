@@ -68,14 +68,13 @@ Since there is no dynamic memory allocation, array sizes must be declared explic
 
 So there is no way to declare arrays like here.
 
-Or is there?
 
 ```c
 int size = 5;
 int array[size];
 ```
 
-This program astonishingly works despite it being a runtime definition. Why? Because I didn't make it the 'right' way. That ushers us into the...
+It will only take around 5 more lines to get this working. But those 5 lines will take 50 minutes to write because of...
 
 #### Technical Debt
 
