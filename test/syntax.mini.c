@@ -1,13 +1,9 @@
 float main()
 {
-  char str[1] = "af";
-  int a = 20;
-  int arr[20];
-  while (a > 10)
-  {
-    a = a - 1;
-    printf("asd");
-    break;
-  }
-  return arr[14];
+  int value[][2] = {{2}, 2, 4, -1};
+  float weights[] = {4, -3, 2, 1};
+  int arr[2][4];
+  int a = 3.2;
+  printf("Value0 = %d, weight0= %f\n", value[0], weights[1]);
+  return arr[1][1];
 }

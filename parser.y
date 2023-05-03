@@ -606,7 +606,7 @@ void typeCheckArrayInitialiser(Type* elementType, Node* expr){
         }
         TypeEnum baseType = getArrayBaseType(elementType);
         /* printf("Checking 2) %d %d\n", baseType, localElement->exprType.op); */
-        if(localElement->exprType.op != baseType && localElement->exprType.op != elementType->type->op){
+        if(!typeCheckAssign(baseType, localElement->exprType.op) && !typeCheckAssign(elementType->type->op, localElement->exprType.op)){
             compileError(localElement->src, localElement->src.length, "Invalid array element type 2");
         }
         //advance to next element in list

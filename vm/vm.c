@@ -291,9 +291,10 @@ uintptr_t typeCastedValue(uintptr_t value, TypeEnum original, TypeEnum targetTyp
   }
   else if (original == T_FLOAT && targetType == T_INT)
   {
-    float originalValue = FROM_UINTPTR(value, float);
-    int castedValue = (int)originalValue;
-    casted = TO_UINTPTR(castedValue);
+    runtimeError("Cannot cast float to int.\n");
+    // float originalValue = FROM_UINTPTR(value, float);
+    // int castedValue = (int)originalValue;
+    // casted = TO_UINTPTR(castedValue);
   }
   else if (original == T_CHAR && targetType == T_INT)
   {
@@ -317,6 +318,7 @@ uintptr_t typeCastedValue(uintptr_t value, TypeEnum original, TypeEnum targetTyp
   {
     casted = value;
   }
+  return casted;
 }
 void assignStatement()
 {
@@ -376,7 +378,8 @@ void arrayAssign()
   {
     runtimeError("Array index out of bounds: " ANSI_COLOR_BOLD ANSI_COLOR_RED "(%d for size of %d)\n" ANSI_COLOR_RESET, offsetInt, arr->type->size);
   }
-  arrBasePointer[offsetInt] = getAddrValue(exprAddr);
+  // printf("\t\tType %d[] = %d\n", getArrayBaseType(arr->type), getArrayBaseType(exprAddr->type));
+  arrBasePointer[offsetInt] = typeCastedValue(getAddrValue(exprAddr), getArrayBaseType(exprAddr->type), getArrayBaseType(arr->type));
   // printf("Successfully set %ld=%c\n", arrBasePointer[offsetInt], getAddrIntValue(exprAddr));
 }
 void arrayDeclaration()
