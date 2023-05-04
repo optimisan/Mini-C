@@ -7,16 +7,21 @@
 #include "./backend/built-in-functions.h"
 #include "y.tab.h"
 
-// extern yyin;
-SymbolTable *table;
-// extern char *yytext;
+// The current line number.
+// This is from tokenizer.l.
 extern int lineno;
 extern FILE *yyin;
+// Current token's lexeme
 extern char *yytext;
+// The source file name
 extern char *currentFileName;
+// From lex.yy.c, returns the next token.
+// Ends with EOF
 int yylex();
+// Parses the source (from parser.y)
 int yyparse();
 
+// Prints all tokens frrom yylex()
 void testTokenizer()
 {
   int token;
@@ -29,15 +34,24 @@ void testTokenizer()
   }
   printf("%-10d\t\t %-18s\t\t %-18s\t\n", lineno, "EOF", "EOF");
 }
-
+/**
+ * @brief Run the compiler
+ *
+ * This calls `yyparse()` which calls `backend` when the start
+ * production rule is reduced.
+ *
+ * The AST is passed to `backend` which generates the IR (as three address code)
+ * and then calls the `VM` (virtual machine) to execute the IR.
+ *
+ * @param argc
+ * @param argv
+ * @return int
+ */
 int main(int argc, char *argv[])
 {
+  // Options like --dump-ast are parsed and flags set here
   char *filename = parseOptions(argc, argv);
-  // if (argc != 2)
-  // {
-  //   fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
-  //   return 1;
-  // }
+  // Open fresh
   yyin = fopen(filename, "r");
   if (!yyin)
   {
@@ -47,12 +61,18 @@ int main(int argc, char *argv[])
   currentFileName = filename;
   if (dumpTokens)
     testTokenizer();
+  // On testing the tokenizer the file is read till the end,
+  // so re-initialize the file pointer.
   yyin = fopen(filename, "r");
   lineno = 1;
-  // return 0;
-  // printf("Starting parser\n");
+  // Starting the parser
+  // Initialise the symbol tables
   initSymbolTable();
+  // Add the built in functions
+  // to the global symbol table
   installBuiltInFunctions(globals);
+  // Run the parser. All further operations will be
+  // from parser.y
   int error = yyparse();
   if (error)
   {

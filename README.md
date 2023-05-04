@@ -4,7 +4,7 @@ A compiler for a subset of C, made using lex and yacc.
 
 ## Language features
 
-Before we get to the technicalities, here is a program that can successfully run:
+Before we get to the details, here is a program that can successfully run:
 
 ```c
 int factorial(int n)
@@ -67,7 +67,6 @@ Atleast the AST for a function is freed once it is compiled to three address cod
 Since there is no dynamic memory allocation, array sizes must be declared explicitly.
 
 So there is no way to declare arrays like here.
-
 
 ```c
 int size = 5;

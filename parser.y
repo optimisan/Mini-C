@@ -433,16 +433,16 @@ switchList: stmt
     | cases caseLabel stmtList
     ; */
 
-caseLabel: caseType {templineno = lineno; tempcol = col- 4;} expr ':' {
+caseLabel: CASE {templineno = lineno; tempcol = col- 4;} expr ':' {
                 if($3->type!= NODE_LITERAL){
                     compileError((Coordinate){templineno, tempcol, 0}, $3->src.length + 5, "Case label must be a constant");
                 }
                 if($3->exprType.op != T_INT){
                     compileError((Coordinate){templineno, tempcol, 0}, $3->src.length+5, "Case label must be an integer");
                 }
-} ;
-
-caseType: CASE | DEFAULT;
+} 
+ | DEFAULT ':' {$$ = NULL;}
+;
 
 whileStmt: WHILE '(' expr ')' stmt {$$ = oprNode(OPR_WHILE, 2, $3, $5);}
 
