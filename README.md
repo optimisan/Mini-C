@@ -129,11 +129,22 @@ Specify a file name as the argument above to compile and run the file:
 > bash compile.bash test.mini.c
 ```
 
+To run after compiling,
+
+```bash
+> bash compile.bash
+> ./compiler filename.mini.c --dump-ast
+```
+
 Or, you can run a file `test/filename.mini.c` in the `test/` directory by running
 
 ```bash
 bash test.bash filename
 ```
+
+### Output dumps
+
+You can optionally pass the flags `--dump-ast`, `--dump-tokens` and `--dump-ir` to the dump corresponding structures to `stdout`.
 
 ## Output
 
