@@ -6,6 +6,19 @@
 /* Flag set by ‘--verbose’. */
 int dumpIR = 0, dumpAST = 0, dumpTokens = 0;
 
+/**
+ * @brief Parse command line options
+ *
+ * Available options:
+ * -h, --help
+ * --dump-ir
+ * --dump-ast
+ * --dump-tokens
+ *
+ * @param argc
+ * @param argv
+ * @return char* Returns the filename of the source code.
+ */
 char *parseOptions(int argc, char **argv)
 {
   int c;

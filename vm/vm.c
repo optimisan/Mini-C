@@ -76,6 +76,18 @@ int getFunctionIP(Address *addr)
   }
   return FROM_UINTPTR(ip, int);
 }
+/**
+ * @brief Get the value of an address.
+ *
+ * If the address is a constant, the value
+ * is cast to uintptr_t appropriately.
+ *
+ * If the address is a register, the value
+ * is loaded from the register.
+ *
+ * @param addr
+ * @return uintptr_t
+ */
 uintptr_t getAddrValue(Address *addr)
 {
   if (addr->isConstant)
@@ -95,11 +107,22 @@ uintptr_t getAddrValue(Address *addr)
   // printf("\t\t\t\t\t(id)getaddrvalue for %d=%ld\n", addr->id, load(addr->id));
   return load(addr->id);
 }
+// Get the value of an address as an int. (For convenience)
+// This is used for array indexing.
+// Can return nonsense if the address is not an int.
 int getAddrIntValue(Address *addr)
 {
   uintptr_t temp = getAddrValue(addr);
   return FROM_UINTPTR(temp, int);
 }
+/**
+ * @brief Push a value onto the stack.
+ *
+ * The value is pushed as a VMValue struct. The src
+ * and types are extracted from the address.
+ *
+ * @param addr
+ */
 void push(Address *addr)
 {
   VMValue *vmValue = malloc(sizeof(VMValue));
@@ -113,6 +136,7 @@ void push(Address *addr)
   vmValue->next = vm.stack;
   vm.stack = vmValue;
 }
+// Pop from stack
 VMValue *pop()
 {
   if (!vm.stack)
@@ -125,6 +149,7 @@ VMValue *pop()
   vm.stack = next;
   return value;
 }
+// Pop from the stack and return only the value
 uintptr_t popValue()
 {
   VMValue *v = pop();
@@ -132,6 +157,7 @@ uintptr_t popValue()
   free(v);
   return value;
 }
+// Get the number of values on the stack
 int stackLength()
 {
   int length = 0;
@@ -143,7 +169,16 @@ int stackLength()
   }
   return length;
 }
+// The main function's function address
 Address *mainFuncAddr = NULL;
+/**
+ * Scan all instructions and save labels and function
+ * IPs.
+ * This is done before executing the instructions
+ *
+ * Also sets the mainFuncAddr to the main function address.
+ * Raises an error if main is not defined.
+ */
 void installLabelsAndFunctions()
 {
   while (!IS_AT_END())
@@ -168,8 +203,10 @@ void installLabelsAndFunctions()
     runtimeError("'main' function not defined.\n");
   }
 }
+// Current instruction that is executing
 Instruction currentInstruction;
-
+// These are all functions to handle various types
+// of instructions.
 void assignStatement();
 void callFunction();
 void returnStatement();
@@ -179,6 +216,11 @@ void arrayAssign();
 void arrayIndex();
 void handleParam();
 
+/**
+ * Execute all global instructions.
+ * Global instructions are those which are outside
+ * function definitions.
+ */
 void executeGlobals()
 {
   vm.ip = 0;
@@ -207,19 +249,27 @@ void executeGlobals()
     }
   }
 }
-
+// Main function's result register address
+// This is used to store the return value of main
 Address *mainReturnValue;
 
+/**
+ * @brief Run the VM.
+ * Installs labels and functions and executes globals.
+ * A new instruction calling the main function is created
+ * and execution started from there.
+ */
 void runVM()
 {
   installLabelsAndFunctions();
   executeGlobals();
-  // vm.ip = getFunctionIP(mainFuncAddr);
+  // Create a call instruction to call main
   mainReturnValue = newTempAddress(mainFuncAddr->type->type);
+  // Set the instruction pointer to the main function call
   currentInstruction = *newInstruction(OP_CALL, mainFuncAddr, newIntAddress0(0), mainReturnValue);
+  // The main loop
   for (; !(vm.ip > vm.ir->size); currentInstruction = READ_INSTRUCTION())
   {
-    // printf("\t\tat %d\n", vm.ip);
     switch (currentInstruction.op)
     {
     case OP_CALL:
@@ -264,11 +314,14 @@ void runVM()
       handleParam();
       break;
     default:
+      // Since other instruction op are
+      // ASCII values, they are (should be) math operations
       mathOperation();
       // runtimeError("Invalid instruction.");
       break;
     }
   }
+  // Get the return value of main and print it
   uintptr_t val = getAddrValue(mainReturnValue);
   printf(ANSI_COLOR_BOLD ANSI_COLOR_PINK "\n===== Execution complete! =====\n" ANSI_COLOR_RESET "Main function returned: %d\n", FROM_UINTPTR(val, int));
 }

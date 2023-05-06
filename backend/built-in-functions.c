@@ -10,7 +10,18 @@
 #include <regex.h>
 #include <time.h>
 
+// This is from `tokenizer.l`
 void point_at_in_line(int lineno, int from, int to);
+
+/**
+ * These are all the built in functions
+ *
+ * Before calling a function, the parameters are pushed to the stack
+ * as instances of `VMValue`. The function is then called with the
+ * parameters as an array of `VMValue*` and the number of parameters.
+ *
+ */
+
 void printfFunction(VMValue **params, int n);
 void secondsSinceEpoch(VMValue **params, int n);
 void regexMatch(VMValue **params, int n);
@@ -26,6 +37,17 @@ extern VM vm;
 
 hashmap *functionMap;
 
+/**
+ * @brief Installs the built in function in the Symbol Table
+ *
+ * @param table The symbol table
+ * @param nativeCode Function pointer in C. This accepts a pointer to VMValue*'s and the number of arguments.
+ * @param name The name of the function
+ * @param variadic If the function is variadic
+ * @param returnType The return `Type*` of the function
+ * @param nparams The number of parameters
+ * @param ... Type* of the parameters
+ */
 void installFunction(SymbolTable *table, void *nativeCode, char *name, int variadic, Type *returnType, int nparams, ...)
 {
   // char *nameCopy = malloc(strlen(name) + 1);
@@ -47,6 +69,13 @@ void installFunction(SymbolTable *table, void *nativeCode, char *name, int varia
   hashmap_set(functionMap, name, strlen(name), TO_UINTPTR(nativeCode));
 }
 
+/**
+ * @brief Installs all the built in functions
+ *
+ * @param table Symbol Table. This is where the functions will be installed
+ * Pass `globals` as the symbol table to have global functions.
+ * These functions cannot be redifined (due to the way the symbol tables work)
+ */
 void installBuiltInFunctions(SymbolTable *table)
 {
   srand(time(NULL));
@@ -82,19 +111,6 @@ void installBuiltInFunctions(SymbolTable *table)
   installFunction(table, (void *)scanFloat, "scanFloat", 0, newType(T_FLOAT), 0);
   installFunction(table, (void *)scanChar, "scanChar", 0, newType(T_CHAR), 0);
   installFunction(table, (void *)scanString, "scanString", 0, returnType, 0);
-  // Symbol *funcSym = install("printf", &table, S_GLOBAL - 1, (Coordinate){0, 0, 0});
-  // Type *type = newType(T_FUNCTION);
-  // type->variadicFunc = 1;
-  // type->size = 1;
-  // type->proto = malloc(sizeof(Type) * 2);
-  // type->proto[0] = newType(T_ARRAY);
-  // type->proto[0]->type = newType(T_CHAR);
-  // type->proto[0]->size = 1;
-  // type->type = newType(T_INT);
-  // funcSym->type = type;
-
-  // hashmap_set(functionMap, "printf", strlen("printf"), (void *)printfFunction);
-  // printf("printf type is %d\n", funcSym->type->op);
 }
 
 void exitFunction(VMValue **params, int n)

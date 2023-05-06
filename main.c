@@ -37,7 +37,7 @@ void testTokenizer()
 /**
  * @brief Run the compiler
  *
- * This calls `yyparse()` which calls `backend` when the start
+ * This calls `yyparse()` which calls `backend` (backend/backend.c) when the start
  * production rule is reduced.
  *
  * The AST is passed to `backend` which generates the IR (as three address code)

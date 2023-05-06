@@ -146,10 +146,8 @@ union YYSTYPE
     char* sValue;
     IdStruct id;
     char cValue;
-    int* sizes;
-    Node* node;
 
-#line 153 "y.tab.h"
+#line 151 "y.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

@@ -32,7 +32,6 @@ int yylex();
     char* sValue;
     IdStruct id;
     char cValue;
-    int* sizes;
     Node* node;
 };
 
