@@ -1,8 +1,13 @@
 #include <stdio.h>
-void main()
+int main()
 {
-  int a = 0x34;
-  int b = 0b10101;
-  int c = 013;
-  printf("c=%d", c);
+  // int a[4][2][5] = {
+  //     {{1, 2}},
+  //     {{3, 4}},
+  //     {{5, 6}},
+  //     {{7, 8}}};
+  for (;;)
+    ;
+  // return a[6][3][4];
+  return 5;
 }

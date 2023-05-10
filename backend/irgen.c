@@ -7,9 +7,13 @@
 #include <stdlib.h>
 #include <string.h>
 void compileError(Coordinate pos, int lexemeLength, char *format, ...);
-
+// The current IR being generated
 IR *ir;
+// Since function declarations cannot nest,
+// we only need to keep track of the current function
 Address *currentFunction = NULL;
+// But control statements can nest,
+// hence there is a linked list of control blocks
 typedef struct ControlBlock
 {
   Address *breakLabel;
@@ -36,6 +40,13 @@ static void endControlBlock()
 
 static Address *irNode(Node *node);
 
+/**
+ * @brief Generate IR for the given AST
+ *
+ * @param rootNode AST root node `program`
+ * @param sourceFilename For error reporting
+ * @return IR*
+ */
 IR *generateIR(Node *rootNode, char *sourceFilename)
 {
   ir = newIR(sourceFilename);
@@ -55,7 +66,12 @@ static Address *irFor(Node *node);
 static Address *irBreak(Node *node);
 static Address *irContinue(Node *node);
 static Address *irArrayExpr(Node *node);
-
+/**
+ * @brief Generate IR for a node. Calls the appropriate
+ * function based on node type.
+ *
+ * @return Address* Returns the node's address (can be a variable or function address)
+ */
 static Address *irNode(Node *node)
 {
   if (node == NULL)
@@ -145,6 +161,7 @@ static Address *irContinue(Node *node)
   addInstruction(ir, newInstruction(OP_GOTO, NULL, NULL, currentControlBlock->continueLabel));
   return NULL;
 }
+// For statement
 static Address *irFor(Node *node)
 {
   Address *startLabel = newLabelAddress();
@@ -154,6 +171,10 @@ static Address *irFor(Node *node)
   irNode(node->as.opr.operands[0]);
   addInstruction(ir, newInstruction(OP_LABEL, NULL, NULL, startLabel));
   Address *condition = irNode(node->as.opr.operands[1]);
+  if (!condition)
+  {
+    condition = newIntAddress0(1);
+  }
   addInstruction(ir, newInstruction(OP_IF_FALSE_GOTO, condition, NULL, endLabel));
   irNode(node->as.opr.operands[3]);
   addInstruction(ir, newInstruction(OP_LABEL, NULL, NULL, continueLabel));
@@ -201,12 +222,42 @@ static Address *irIf(Node *node)
     addInstruction(ir, newInstruction(OP_LABEL, NULL, NULL, endLabel));
   }
 }
-
+/**
+ * @brief Generate a function call
+ *
+ * There are two parts to a function:
+ * 1. The parameters
+ * Parameters are generated in reverse order, right to left is
+ * top to down.
+ * The parameter instruction is [OP_PARAM address null null]
+ * Example:
+ *      f(a, b, c) will generate parameters as:
+ *      OP_PARAM c
+ *      OP_PARAM b
+ *      OP_PARAM a
+ *
+ * 2. The function call
+ * The instruction for a call is as follows:
+ * [OP_CALL funcAddress numParameters returnAddress]
+ *
+ * Example:
+ *      temp = f(a, b, c) will generate the call as:
+ *      OP_CALL f 3 temp
+ *
+ * Even if the function's return value is not assigned to anything,
+ * a temporary return address created is still passed to the function call.
+ * This is used to get the return address from the main function.
+ *
+ * @param node
+ * @return Address*
+ */
 static Address *irFuncCall(Node *node)
 {
   // generate the parameters
   Node *params = node->as.opr.operands[1];
   int nparams = 0;
+  // since this is generating while traversing deeper,
+  // the parameters are generated in reverse order (right to left)
   if (params)
   {
     while (params && params->type == NODE_OPR && params->as.opr.type == OPR_LIST)
@@ -227,28 +278,153 @@ static Address *irFuncCall(Node *node)
   addInstruction(ir, newInstruction(OP_CALL, symAddr, newIntAddress(nparams, node->src), temp));
   return temp;
 }
+/**
+ * Each `getArrayIndexOffset` returns two values:
+ * 1. The offset from the base operand of the array expression,
+ * 2. The size of the array element after 1 dereference.
+ *
+ */
 typedef struct
 {
   Address *offset;
   int size;
 } ArrayInfo;
+/**
+ * @brief Calculates the rolled-out array index offset
+ *
+ * This function is called with an array_index node, whose opr is '['
+ * An array_index node is for an array expression. It can be an rvalue
+ * or an lvalue (for an assignment or an expression, respectively).
+ *
+ * Example:
+ * int val = arr[3][4]; has 'arr[3][4]' as an lvalue array_index node
+ * arr[2][3] = val; has 'arr[2][3]' as an rvalue array_index node
+ *
+ * The AST for arr[3][4] is like so:
+ * array_index (
+ *      array_index (
+ *         symbol (arr)
+ *         int (3)
+ *      )
+ *    int (4)
+ * )
+ * The array size information rests with the symbol within, from which the offset
+ * is calculated. Since only the symbol's type contains the whole array size,
+ * other expressions cannot be used as array base pointers because
+ * the type of an expression is stored as a stripped down version of the original type.
+ * Specifically, the expression's exprType only has the op as Array and the total
+ * size as argument, not the individual dimension sizes.
+ *
+ * This function does not deal with the base symbol of the array. It must be passed in.
+ *
+ * -----------------------------------------------------
+ *
+ * **CALCULATING OFFSET**
+ *
+ * Consider the array `arr`
+ *    ->  int arr[4][5]
+ * Let us take a look at the offset for the array expression:
+ *    ->  arr[2][3]
+ *
+ * It is helpful to think of it the "C" way.
+ * The 2D indexing is desugared to pointer arithmetic by C like so:
+ *                    *(*(arr + 2) + 3)
+ * Assume that arr is 0.
+ * This pointer arithmetic reduces as follows:
+ *       1) arr + 2 = arr + 2*sizeof(arr) = (arr + 2)*5 = (0 + 2)*5 = 10, since a row has 5 elements and arr is 0
+ *       2) ((10) + 3)*(sizeof(arr[2])) = 13, taking the size of integer to be 1
+ * Finally, *(arr + 13) is the end element being addressed (not the _byte_).
+ *
+ * The 2D case is a special case of the general nD case. Here is a 3D example:
+ *  [Decl]      -> int arr[4][5][6];
+ *  [ArrayExpr] -> arr[1][2][3] = 24;
+ *
+ * It is even more beneficial to look at it from the "functional" perspective.
+ * Each dereference operator is a function that returns
+ * the local array size of what it is dereferencing. For example,
+ *
+ * Consider -> int arr[4][5][6];
+ *  and let -> arr[1][2][3] be the expression:
+ *                *(arr + 1) returns size(arr[1]) = 5, because arr[1] is an array of 5 elements.
+ *          > [The 5 elements are themselves arrays]
+ *                *(*(arr + 1) + 2) returns size as size(arr[1][2]) = 6, because arr[1][2] is an
+ *                                        array of 6 elements.
+ *
+ * The dereference function also returns the offset it calculates, based on the size of its *operand*.
+ *
+ *               *(arr + 1) has the operand as `arr` and returns sizeof(arr)*1 + offset(arr) as the offset
+ *
+ * We take the base symbol `arr` as the base operand, with size as 1. This gives us the offset
+ * in terms of *elements*, not bytes.
+ *
+ * The high level view of this dereference function is:
+ *
+ *   DEREFERENCE (base, offset):
+ *      baseSize   := DEREFERENCE(base)->size
+ *      baseOffset := DEREFERENCE(base)->offset
+ *      return {
+ *        size   := DEREFERENCED_SIZE(base)
+ *        offset := baseOffset*baseSize + offset
+ *      }
+ * But how do we find `DEREFERENCED_SIZE(base)`? Luckily, the `Type*` structure is
+ * what we need in times of support. Since a `Type` links to the type of the
+ * array's element type, we can just keep going down the `Type` list for
+ * every `DEREFERENCE` call. More explanation is in the function definition below.
+ *
+ * -----------------------------------------------------
+ * **LASTLY**
+ *
+ * If you haven't noticed already, the first dimension is not used
+ * anywhere to calculate the true offset. The first dimension only contributes to the
+ * total size of the array. This is why the first dimension can be empty in an
+ * array declaration. Below is an example.
+ *
+ * For every dimension index, it is multiplied with the size of the dimensions
+ * following it.
+ *              [Decl] arr  [?]      [5]      [6] ;
+ *              [Expr] arr  [1]      [2]      [3] ;
+ *                         *(5*6) + *(6)  +  *(1) ;
+ *
+ * @param arrIndex
+ * @param type The type of the array
+ * @return ArrayInfo
+ */
 static ArrayInfo getArrayIndexOffset(Node *arrIndex, Type *type)
 {
+  /**
+   * The AST for arr[3][4] is like so:
+   * array_index (
+   *      array_index (   <--- firstElement
+   *         symbol (arr) <--- firstElement
+   *         int (3)      <--- operands[1]
+   *      )
+   *    int (4)           <--- operands[1]
+   * )
+   *
+   */
   Node *firstElement = arrIndex->as.opr.operands[0];
   if (firstElement->type == NODE_SYMBOL)
   {
+    // base case, refers to `symbol(arr)` above.
+    // The size is 1, because we want the element offset, not the byte offset.
     return (ArrayInfo){irNode(arrIndex->as.opr.operands[1]), 1 /* , getHostSize(type->type->op) */};
   }
+  // Sanity check
   if (arrIndex->type != NODE_OPR || arrIndex->as.opr.type != '[')
   {
+    // should never happen. This is just a sanity check
     printf("Error: Expected array index\n");
     exit(1);
   }
   else
   {
     // printf("Outer type size if %d and inner is %d\n", type->size, type->type->size);
-    // second element is the index at this level
-    Address *currentOffset = irNode(arrIndex->as.opr.operands[1]);                       // 24
+    // second element is the index offset at this level
+    Address *currentOffset = irNode(arrIndex->as.opr.operands[1]); // 24
+    // get the inner array info
+    // Consider we are at *(*(arr+1) + 2), where currentOffset is 2
+    // innerInfo corresponds to evaluating *(arr+1)
+    // Notice that the type we pass is the DEREFERENCED type, not the type of the current array
     ArrayInfo innerInfo = getArrayIndexOffset(arrIndex->as.opr.operands[0], type->type); // 12, 1
     Address *temp = newTempAddress(newType(T_INT));
     addInstruction(ir, newInstruction('*', newIntAddress(type->size, arrIndex->src), innerInfo.offset, temp));
@@ -272,6 +448,17 @@ static Symbol *getArrayBase(Node *arrIndex)
     compileError(arrIndex->src, 1, "Only symbols are supported as arrays. Need a different architecture to support other types.");
   }
 }
+/**
+ * @brief Add an array indexing instruction (can be index expr rval or assign expr lval)
+ *
+ * Extracts the base array symbol, gets the offset and builds the temporary address
+ * with a toned-down type, if `result` is NULL.
+ *
+ * @param node
+ * @param opType The operation to use for the array index. This is one of OP_ARRAY_INDEX and OP_ARRAY_ASSIGN
+ * @param result
+ * @return Address*
+ */
 static Address *indexArrayWithOpAs(Node *node, InstType opType, Address *result)
 {
   Symbol *sym = getArrayBase(node);
