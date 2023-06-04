@@ -46,7 +46,7 @@ I ran some loops in python and Mini-C, and this is around 3-4 times slower than 
 
 That means it is horribly slow. But what was I even expecting out of a 6-day project?
 
-Honestly, I thought this shouldn't be _too_ far from python. So why is it slower? Lot of `malloc`'s might be the case.
+Honestly, I thought this shouldn't be _too_ far from python. So why is it slower? Lot of `malloc`'s might be the case. And zero optimizations anywhere.
 
 That brings me to memory management in this compiler.
 
